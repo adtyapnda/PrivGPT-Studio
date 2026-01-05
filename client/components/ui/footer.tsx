@@ -1,11 +1,12 @@
 "use client";
 
-import { Zap, Star, Github, Mail, Menu } from "lucide-react";
+import { Github, Mail } from "lucide-react";
+import { FaDiscord } from "react-icons/fa";
 import Link from "next/link";
 import Image from "next/image";
 import { useTheme } from "@/components/theme-provider";
 
-export default function footer() {
+export default function Footer() {
   const { darkMode } = useTheme();
 
   return (
@@ -100,7 +101,7 @@ export default function footer() {
             </ul>
           </div>
 
-          {/* Connect (FIXED AS PER ISSUE #60) */}
+          {/* Connect */}
           <div className="md:col-span-2">
             <h3 className="font-semibold mb-4">Connect</h3>
             <div className="flex space-x-5 text-muted-foreground">
@@ -115,7 +116,7 @@ export default function footer() {
                 <Github className="w-6 h-6" />
               </a>
 
-              {/* Discord */}
+              {/* Discord (react-icons as requested) */}
               <a
                 href="https://discord.gg/J9z5T52rkZ"
                 target="_blank"
@@ -123,13 +124,7 @@ export default function footer() {
                 aria-label="Discord"
                 className="hover:text-foreground transition"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 127.14 96.36"
-                  className="w-6 h-6 fill-current"
-                >
-                  <path d="M107.7 8.07A105.15 105.15 0 0 0 81.47 0a72.06 72.06 0 0 0-3.36 6.83 97.68 97.68 0 0 0-29.11 0A72.37 72.37 0 0 0 45.64 0a105.89 105.89 0 0 0-26.25 8.09C2.9 32.65-2.65 56.6 1.9 80.21a105.73 105.73 0 0 0 32.06 16.15 77.7 77.7 0 0 0 6.89-11.11 68.42 68.42 0 0 1-10.85-5.18c.91-.66 1.8-1.35 2.66-2.06 20.94 9.79 43.6 9.79 64.28 0 .87.71 1.76 1.4 2.66 2.06a68.68 68.68 0 0 1-10.87 5.19 77 77 0 0 0 6.89 11.1 105.25 105.25 0 0 0 32.06-16.14c4.95-27.28-8.26-51.13-24.91-72.14Z" />
-                </svg>
+                <FaDiscord className="w-6 h-6" />
               </a>
 
               {/* Email */}
@@ -145,7 +140,7 @@ export default function footer() {
         </div>
 
         <div className="border-t mt-8 pt-8 text-center text-muted-foreground">
-          <p>&copy; 2026 PrivGPT Studio. All rights reserved.</p>
+          <p>&copy; 2025 PrivGPT Studio. All rights reserved.</p>
         </div>
       </div>
     </footer>
