@@ -49,8 +49,7 @@ const formSchema = z
       .string()
       .regex(/^[1-9]\d{9}$/, {
         message: "Phone number must be a valid 10-digit number",
-      })
-      .optional().or(z.literal("")),
+      }).optional().or(z.literal("")),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match.",
