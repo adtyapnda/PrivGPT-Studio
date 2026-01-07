@@ -12,7 +12,7 @@
 ## 🔗 Quick Links
 - [✨ Ways to Contribute](#-ways-to-contribute)
 - [🔍 How to Find Suitable Issues](#-how-to-find-suitable-issues)
-- [🚨 Mandatory Contribution Rules](#-mandantory-contribution-rules)
+- [🚨 Mandatory Contribution Rules](#-mandatory-contribution-rules)
 - [📝 Issue Guidelines](#-issue-guidelines)
 - [🌟 How to Submit a Contribution / PR](#-how-to-submit-a-contribution--pr)
 - [📜 Code of Conduct](#-code-of-conduct)
