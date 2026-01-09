@@ -7,11 +7,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
-import { DayPicker } from "react-day-picker"
-import "react-day-picker/dist/style.css"
-
+import * as React from "react";
 import { format } from "date-fns"
 import { CalendarIcon } from "lucide-react"
+
+import { DayPicker, DropdownProps } from "react-day-picker"
+import "react-day-picker/dist/style.css"
 
 import {
   Popover,
@@ -77,6 +78,33 @@ const formSchema = z
     message: "Passwords don't match.",
     path: ["confirmPassword"],
   });
+
+const CalendarDropdown = (props: DropdownProps) => {
+  const { value, onChange, children } = props;
+  const options = React.Children.toArray(children) as React.ReactElement<React.OptionHTMLAttributes<HTMLOptionElement>>[];
+
+  const handleChange = (newValue: string) => {
+    const changeEvent = {
+      target: { value: newValue },
+    } as React.ChangeEvent<HTMLSelectElement>;
+    onChange?.(changeEvent);
+  };
+
+  return (
+    <Select value={value?.toString()} onValueChange={handleChange}>
+      <SelectTrigger className="pr-1.5 focus:ring-0">
+        <SelectValue>{options.find(o => o.props.value === value)?.props.children}</SelectValue>
+      </SelectTrigger>
+      <SelectContent position="popper" className="max-h-[200px] overflow-y-auto">
+        {options.map((option) => (
+          <SelectItem key={option.props.value as string} value={option.props.value as string}>
+            {option.props.children}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  )
+}
 
 export function SignUpForm() {
   const router = useRouter();
@@ -252,6 +280,9 @@ export function SignUpForm() {
                           toYear={new Date().getFullYear()}
                           captionLayout="dropdown"
                           disabled={{ after: new Date() }}
+                          components={{
+                            Dropdown: CalendarDropdown,
+                          }}
                         />
                       </PopoverContent>
                     </Popover>
