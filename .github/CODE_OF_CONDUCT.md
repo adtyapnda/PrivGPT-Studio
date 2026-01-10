@@ -80,7 +80,7 @@ PrivGPT-Studio is not just a privacy-focused project—it is a community built o
 
 ***Attribution***
 
-This Code of Conduct is adapted from the [Contributor Covenant v3.0](https://www.contributor-covenant.org/version/3/0/code_of_conduct/), with modifications to reflect the privacy-oriented goals and collaborative nature of PrivGPT-Studio under GSSoC'25. 
+This Code of Conduct is adapted from the [Contributor Covenant v3.0](https://www.contributor-covenant.org/version/3/0/code_of_conduct/), with modifications to reflect the privacy-oriented goals and collaborative nature of PrivGPT-Studio. 
 
 📌 Original work License under Creative Commons Attribution 4.0 International [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
 
