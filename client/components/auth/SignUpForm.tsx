@@ -8,13 +8,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
-import { DayPicker } from "react-day-picker";
+import { DayPicker, DropdownProps } from "react-day-picker";
 import "react-day-picker/dist/style.css";
 
 import { format } from "date-fns";
 import { CalendarIcon, Eye, EyeOff } from "lucide-react"; // Imported Eye icons
 
-import { DayPicker, DropdownProps } from "react-day-picker"
+import React from "react";
 import "react-day-picker/dist/style.css"
 
 import {
