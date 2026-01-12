@@ -64,10 +64,10 @@ export default function header() {
             </Link>
             {token && (
               <Link 
-                href="/settings"
+                href="/dashboard"
                 className="text-muted-foreground hover:text-foreground transition-colors"
               >
-                Settings
+                Dashboard
               </Link>
             )}
             <Link href={token ? "/chat" : "/sign-in?redirect=/chat"}>
@@ -124,13 +124,13 @@ export default function header() {
                 </SheetClose>
                 {token && (
                   <SheetClose asChild>
-                    <Link href="/settings">
+                    <Link href="/dashboard">
                       <Button
                         variant="ghost"
                         className="w-full justify-start"
                         onClick={closeMobileMenu}
                       >
-                        Settings
+                        Dashboard
                       </Button>
                     </Link>
                   </SheetClose>
