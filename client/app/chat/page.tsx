@@ -1874,11 +1874,56 @@ export default function ChatPage() {
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+  // Ctrl/Cmd + Enter → Send message
+  if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+    e.preventDefault();
+    handleSend();
+    return;
+  }
+
+  // Enter → Send (existing behavior)
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    handleSend();
+  }
+};
+
+useEffect(() => {
+  const handleGlobalShortcuts = (e: KeyboardEvent) => {
+    // Ctrl/Cmd + K → Clear chat (open confirmation modal)
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
       e.preventDefault();
-      handleSend();
+      setClearChatSessionModal(true);
+      return;
+    }
+
+    // Ctrl/Cmd + M → Switch model
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "m") {
+      e.preventDefault();
+
+      const models =
+        selectedModelType === "local" ? localModels : cloudModels;
+
+      if (!models || models.length <= 1) return;
+
+      const currentIndex = models.indexOf(selectedModel);
+      const nextIndex = (currentIndex + 1) % models.length;
+      const nextModel = models[nextIndex];
+
+      setSelectedModel(nextModel);
+
+      try {
+        localStorage.setItem("selected_model_name", nextModel);
+        localStorage.setItem("selected_model_type", selectedModelType);
+      } catch {}
     }
   };
+
+  window.addEventListener("keydown", handleGlobalShortcuts);
+  return () => window.removeEventListener("keydown", handleGlobalShortcuts);
+}, [selectedModel, selectedModelType, localModels, cloudModels]);
+
+
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
