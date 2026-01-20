@@ -32,7 +32,6 @@ import {
   Settings,
   Info,
   MessageSquare,
-  Zap,
   Home,
   Globe,
   Cpu,
@@ -59,7 +58,6 @@ import {
   RefreshCw,
 } from "lucide-react";
 import Link from "next/link";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
   DropdownMenu,
@@ -116,7 +114,7 @@ import { useRouter } from "next/navigation";
 
 export default function ChatPage() {
   const { darkMode } = useTheme();
-  const { token, logout, isLoading } = useAuth();
+  const { token, isLoading } = useAuth();
   const router = useRouter();
 
   // Loading dots animation component
@@ -2679,34 +2677,6 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "m") {
               <PlusCircle className="w-4 h-4 mr-2" />
               New Chat
             </Button>
-            {token && (
-              <Button
-                variant="ghost"
-                className="w-full justify-start text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20"
-                onClick={() => {
-                  logout();
-                  router.push("/sign-in");
-                }}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="w-4 h-4 mr-2"
-                >
-                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                  <polyline points="16 17 21 12 16 7" />
-                  <line x1="21" x2="9" y1="12" y2="12" />
-                </svg>
-                Sign Out
-              </Button>
-            )}
             <Button
               variant="ghost"
               className="w-full justify-start"

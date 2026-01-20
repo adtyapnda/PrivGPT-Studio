@@ -106,6 +106,11 @@ export default function Footer() {
                   Terms of Service
                 </Link>
               </li>
+              <li>
+                <Link href="/contact" className="hover:text-foreground">
+                  Contact Us
+                </Link>
+              </li>
             </ul>
           </div>
 
