@@ -432,12 +432,7 @@ export default function HomePage() {
                        <Avatar className="w-10 h-10 mr-3">
                          <AvatarFallback>{review.username.substring(0,2).toUpperCase()}</AvatarFallback>
                        </Avatar>
-                       <div>
-                         <div className="font-semibold">{review.username}</div>
-                         <div className="text-sm text-muted-foreground">
-                           {review.role || "User"}
-                         </div>
-                       </div>
+                       <div className="font-semibold">{review.username}</div>
                      </div>
                    </CardContent>
                  </Card>
