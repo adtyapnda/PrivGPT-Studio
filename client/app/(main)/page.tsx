@@ -31,6 +31,30 @@ interface Review {
   role?: string;
 }
 
+const staticReviews: Review[] = [
+  {
+    _id: "static-1",
+    user_id: "static-user-1",
+    username: "Alex Chen",
+    comment: "The local model support is a game changer for privacy. Finally I can use AI without worrying about my data leaving my device.",
+    rating: 5,
+  },
+  {
+    _id: "static-2",
+    user_id: "static-user-2",
+    username: "Sarah Jones",
+    comment: "Incredibly fast responses and the UI is beautiful. Switched from ChatGPT and haven't looked back.",
+    rating: 5,
+  },
+  {
+    _id: "static-3",
+    user_id: "static-user-3",
+    username: "Michael R.",
+    comment: "Great flexibility between cloud and local models. The setup was surprisingly easy.",
+    rating: 4,
+  }
+];
+
 export default function HomePage() {
   const { token } = useAuth();
   const { toast } = useToast();
@@ -65,13 +89,16 @@ export default function HomePage() {
   useEffect(() => {
     const fetchReviews = async () => {
       try {
-        const res = await fetch("http://localhost:5000/api/reviews");
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/reviews`);
         if (res.ok) {
           const data = await res.json();
-          setReviews(data);
+          setReviews([...data, ...staticReviews]);
+        } else {
+          setReviews(staticReviews);
         }
       } catch (error) {
         console.error("Failed to fetch reviews", error);
+        setReviews(staticReviews);
       } finally {
         setIsLoadingReviews(false);
       }
@@ -100,7 +127,7 @@ export default function HomePage() {
 
     setIsSubmitting(true);
     try {
-      const res = await fetch("http://localhost:5000/api/reviews", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/reviews`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -118,8 +145,11 @@ export default function HomePage() {
         });
         setIsDialogOpen(false);
         setComment("");
-        const refreshRes = await fetch("http://localhost:5000/api/reviews");
-        if (refreshRes.ok) setReviews(await refreshRes.json());
+        const refreshRes = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/reviews`);
+        if (refreshRes.ok) {
+           const newData = await refreshRes.json();
+           setReviews([...newData, ...staticReviews]);
+        }
       } else if (res.status === 409) {
         toast({
           title: "Notice",
@@ -414,7 +444,7 @@ export default function HomePage() {
         ) : (
           <div className="relative w-full max-w-[100vw]">
             <div className="flex mb-8 w-max animate-scroll-left">
-               {[...firstRow, ...firstRow, ...firstRow].map((review, i) => (
+               {firstRow.map((review, i) => (
                  <Card key={`${review._id}-1-${i}`} className="w-[350px] mx-4 shrink-0">
                    <CardContent className="p-6">
                      <div className="flex items-center mb-4">
@@ -441,7 +471,7 @@ export default function HomePage() {
 
             {secondRow.length > 0 && (
               <div className="flex w-max animate-scroll-right">
-                 {[...secondRow, ...secondRow, ...secondRow].map((review, i) => (
+                 {secondRow.map((review, i) => (
                    <Card key={`${review._id}-2-${i}`} className="w-[350px] mx-4 shrink-0">
                      <CardContent className="p-6">
                        <div className="flex items-center mb-4">
@@ -459,12 +489,7 @@ export default function HomePage() {
                          <Avatar className="w-10 h-10 mr-3">
                            <AvatarFallback>{review.username.substring(0,2).toUpperCase()}</AvatarFallback>
                          </Avatar>
-                         <div>
-                           <div className="font-semibold">{review.username}</div>
-                           <div className="text-sm text-muted-foreground">
-                             {review.role || "User"}
-                           </div>
-                         </div>
+                         <div className="font-semibold">{review.username}</div>
                        </div>
                      </CardContent>
                    </Card>
