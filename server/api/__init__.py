@@ -9,7 +9,6 @@ mongo = PyMongo()
 bcrypt = Bcrypt()
 gemini_model = None
 
-
 def create_app():
     app = Flask(__name__)
     CORS(app)
@@ -21,10 +20,12 @@ def create_app():
     def index():
         return "Welcome to the PrivGPT-Studio Backend!"
 
-    # configure the gemini model
-    genai.configure(api_key=Config.GEMINI_API_KEY)
-    global gemini_model
-    gemini_model = genai.GenerativeModel("models/gemini-2.5-flash")
+    try:
+        genai.configure(api_key=Config.GEMINI_API_KEY)
+        global gemini_model
+        gemini_model = genai.GenerativeModel("models/gemini-2.5-flash")
+    except Exception as e:
+        print(f"Warning: Gemini API not configured correctly: {e}")
 
     # blueprint imports
     from api.routes.db import db_bp
@@ -39,4 +40,8 @@ def create_app():
     app.register_blueprint(auth_bp)
     from api.routes.contact_routes import contact_bp
     app.register_blueprint(contact_bp)
+    
+    from api.routes.review_routes import review_bp
+    app.register_blueprint(review_bp)
+    
     return app
