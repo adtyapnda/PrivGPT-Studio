@@ -5,20 +5,32 @@ import { AiOutlineDiscord } from "react-icons/ai";
 import Link from "next/link";
 import Image from "next/image";
 import { useTheme } from "@/components/theme-provider";
+import { toast } from "sonner";
 
 export default function Footer() {
   const { darkMode } = useTheme();
+  const contactEmail = process.env.NEXT_PUBLIC_CONTACT_EMAIL;
+
+  const handleEmailClick = () => {
+    if (!contactEmail) {
+      toast.error("Some error occurred opening mailbox");
+      return;
+    }
+
+    window.location.href = `mailto:${contactEmail}`;
+  };
 
   return (
     <footer className="border-t py-12 bg-background px-4">
       <div className="container mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
-          
           {/* Logo + Description */}
           <div className="md:col-span-4">
             <Link href="/" className="flex items-center">
               <Image
-                src={darkMode ? "/logos/logo-dark.svg" : "/logos/logo-light.svg"}
+                src={
+                  darkMode ? "/logos/logo-dark.svg" : "/logos/logo-light.svg"
+                }
                 alt="PrivGPT Studio Logo"
                 width={290}
                 height={53}
@@ -106,7 +118,6 @@ export default function Footer() {
           <div className="md:col-span-2">
             <h3 className="font-semibold mb-4">Connect</h3>
             <div className="flex space-x-5 text-muted-foreground">
-              
               {/* GitHub */}
               <a
                 href="https://github.com/Rucha-Ambaliya/PrivGPT-Studio"
@@ -130,13 +141,13 @@ export default function Footer() {
               </a>
 
               {/* Email */}
-              <Link
-                href="/"
+              <button
+                onClick={handleEmailClick}
                 aria-label="Email"
                 className="hover:text-foreground transition"
               >
                 <Mail className="w-6 h-6" />
-              </Link>
+              </button>
             </div>
           </div>
         </div>
