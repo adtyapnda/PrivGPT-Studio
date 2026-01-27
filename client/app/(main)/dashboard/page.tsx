@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { User, Mail, Loader2, Edit2, Save, X, CalendarIcon } from "lucide-react";
+import { User, Mail, Loader2, Edit2, Save, X, CalendarIcon, LogOut } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -62,7 +62,7 @@ const CalendarDropdown = (props: DropdownProps) => {
 }
 
 export default function SettingsPage() {
-  const { token, isLoading: authLoading } = useAuth();
+  const { token, logout, isLoading: authLoading } = useAuth();
   const router = useRouter();
   
   const [profile, setProfile] = useState<{ 
@@ -160,6 +160,11 @@ export default function SettingsPage() {
     setIsEditing(false);
   };
 
+  const handleLogout = () => {
+    logout();
+    router.push("/sign-in");
+  };
+
   if (authLoading || (loading && token)) {
     return (
       <div className="flex h-[calc(100vh-200px)] items-center justify-center">
@@ -171,11 +176,16 @@ export default function SettingsPage() {
   return (
     <div className="bg-background p-4 md:p-8">
       <div className="mx-auto max-w-4xl space-y-8">
-        <div className="flex items-center space-x-4">
+        
+        <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
             <p className="text-muted-foreground">Manage your profile details.</p>
           </div>
+          <Button variant="destructive" onClick={handleLogout}>
+            <LogOut className="mr-2 h-4 w-4" />
+            Sign Out
+          </Button>
         </div>
 
         <div className="grid gap-8 md:grid-cols-1">

@@ -32,7 +32,6 @@ import {
   Settings,
   Info,
   MessageSquare,
-  Zap,
   Home,
   Globe,
   Cpu,
@@ -59,7 +58,6 @@ import {
   RefreshCw,
 } from "lucide-react";
 import Link from "next/link";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
   DropdownMenu,
@@ -116,7 +114,7 @@ import { useRouter } from "next/navigation";
 
 export default function ChatPage() {
   const { darkMode } = useTheme();
-  const { token, logout, isLoading } = useAuth();
+  const { token, isLoading } = useAuth();
   const router = useRouter();
 
   // Loading dots animation component
@@ -1873,12 +1871,65 @@ export default function ChatPage() {
     );
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
+
+useEffect(() => {
+  const handleGlobalShortcuts = (e: KeyboardEvent) => {
+    const target = e.target as HTMLElement;
+
+    // Do NOT trigger shortcuts while typing in inputs/textareas
+    if (
+      target.tagName === "INPUT" ||
+      target.tagName === "TEXTAREA" ||
+      target.isContentEditable
+    ) {
+      return;
     }
+
+    // Ctrl / Cmd + K → Clear chat
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+      e.preventDefault();
+      setClearChatSessionModal(true);
+      return;
+    }
+
+    // Ctrl / Cmd + M → Switch model (cycle across local + cloud)
+if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "m") {
+  e.preventDefault();
+
+  const allModels = [
+    ...localModels.map((m) => ({ name: m, type: "local" as const })),
+    ...cloudModels.map((m) => ({ name: m, type: "cloud" as const })),
+  ];
+
+  if (allModels.length <= 1) return;
+
+  const currentIndex = allModels.findIndex(
+    (m) => m.name === selectedModel && m.type === selectedModelType
+  );
+
+  const nextIndex =
+    currentIndex === -1
+      ? 0
+      : (currentIndex + 1) % allModels.length;
+
+  const next = allModels[nextIndex];
+
+  setSelectedModel(next.name);
+  setSelectedModelType(next.type);
+
+  try {
+    localStorage.setItem("selected_model_name", next.name);
+    localStorage.setItem("selected_model_type", next.type);
+  } catch {}
+}
+
   };
+
+  window.addEventListener("keydown", handleGlobalShortcuts);
+  return () =>
+    window.removeEventListener("keydown", handleGlobalShortcuts);
+}, [selectedModel, selectedModelType, localModels, cloudModels]);
+
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -2626,34 +2677,6 @@ export default function ChatPage() {
               <PlusCircle className="w-4 h-4 mr-2" />
               New Chat
             </Button>
-            {token && (
-              <Button
-                variant="ghost"
-                className="w-full justify-start text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20"
-                onClick={() => {
-                  logout();
-                  router.push("/sign-in");
-                }}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="w-4 h-4 mr-2"
-                >
-                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                  <polyline points="16 17 21 12 16 7" />
-                  <line x1="21" x2="9" y1="12" y2="12" />
-                </svg>
-                Sign Out
-              </Button>
-            )}
             <Button
               variant="ghost"
               className="w-full justify-start"
@@ -3172,6 +3195,12 @@ export default function ChatPage() {
                   value={input}
                   disabled={isLimitReached}
                   onChange={(_event, newValue) => setInput(newValue)}
+                      onKeyDown={(e) => {
+                       if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSend();
+                     }
+                }}
                   placeholder={isLimitReached ? "Session limit reached. Please start a new chat." :"Type your message and use @ to mention chats..."}
                   style={{
                     control: {
@@ -3204,7 +3233,7 @@ export default function ChatPage() {
                     },
                   }}
                   className="flex min-h-[80px] w-full rounded-md border border-input bg-background text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:border-input disabled:cursor-not-allowed disabled:opacity-50"
-                  onKeyDown={handleKeyPress}
+
                 >
                   <Mention
                     trigger="@"
@@ -3222,7 +3251,12 @@ export default function ChatPage() {
                   value={input}
                   disabled={isLimitReached}
                   onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={handleKeyPress}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                     e.preventDefault();
+                     handleSend();
+                    }
+             }}
                   placeholder={isLimitReached ? "Session limit reached. Please start a new chat." :"Type your message in markdown..."}
                   className={`flex-1 resize-none min-h-[80px] ${isRecording ? "text-transparent caret-foreground" : ""
                     }`}
