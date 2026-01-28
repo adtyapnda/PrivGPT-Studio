@@ -8,6 +8,23 @@ auth_bp = Blueprint('auth', __name__)
 
 @auth_bp.route('/api/register', methods=['POST'])
 def register():
+    """
+    Registers a new user with email and password.
+
+    Expects JSON payload with:
+    - email (str): User's email address (required)
+    - password (str): User's password (required)
+    - username (str): Optional username, defaults to email prefix
+    - gender (str): Optional gender
+    - dob (str): Optional date of birth
+    - phone (str): Optional phone number
+
+    Returns:
+    JSON: Success message on successful registration
+    HTTP 400: If email or password is missing
+    HTTP 409: If user already exists
+    HTTP 201: On successful registration
+    """
     data = request.get_json()
     
     if not data or not data.get('email') or not data.get('password'):
@@ -50,6 +67,19 @@ def register():
 
 @auth_bp.route('/api/login', methods=['POST'])
 def login():
+    """
+    Authenticates a user with email and password.
+
+    Expects JSON payload with:
+    - email (str): User's email address (required)
+    - password (str): User's password (required)
+
+    Returns:
+    JSON: JWT token and success message on successful login
+    HTTP 400: If email or password is missing
+    HTTP 401: If credentials are invalid
+    HTTP 200: On successful login
+    """
     data = request.get_json()
     
     if not data or not data.get('email') or not data.get('password'):
@@ -74,6 +104,17 @@ def login():
 
 @auth_bp.route('/api/profile', methods=['GET'])
 def get_profile():
+    """
+    Retrieves the authenticated user's profile information.
+
+    Requires Authorization header with Bearer token.
+
+    Returns:
+    JSON: User profile data (username, email, gender, dob, phone)
+    HTTP 401: If token is missing or invalid
+    HTTP 404: If user not found
+    HTTP 200: On successful retrieval
+    """
     token = None
     if 'Authorization' in request.headers:
         auth_header = request.headers['Authorization']
@@ -103,6 +144,22 @@ def get_profile():
     
 @auth_bp.route('/api/profile', methods=['PUT'])
 def update_profile():
+    """
+    Updates the authenticated user's profile information.
+
+    Requires Authorization header with Bearer token.
+    Expects JSON payload with optional fields:
+    - username (str): New username
+    - gender (str): New gender
+    - dob (str): New date of birth
+    - phone (str): New phone number
+
+    Returns:
+    JSON: Success message on update
+    HTTP 401: If token is missing or invalid
+    HTTP 400: If no valid fields provided
+    HTTP 200: On successful update
+    """
     token = None
     if 'Authorization' in request.headers:
         auth_header = request.headers['Authorization']

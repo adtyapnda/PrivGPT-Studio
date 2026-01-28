@@ -7,6 +7,15 @@ from bson import ObjectId
 review_bp = Blueprint('review', __name__)
 
 def verify_token(request):
+    """
+    Verifies JWT token from Authorization header.
+
+    Args:
+    request: Flask request object containing headers
+
+    Returns:
+    dict: Decoded token data if valid, None if invalid or missing
+    """
     token = None
     if 'Authorization' in request.headers:
         auth_header = request.headers['Authorization']
@@ -24,6 +33,14 @@ def verify_token(request):
 
 @review_bp.route('/api/reviews', methods=['GET'])
 def get_reviews():
+    """
+    Retrieves all user reviews from the database.
+
+    Returns:
+    JSON: List of review objects with _id and user_id converted to strings
+    HTTP 500: If database error occurs
+    HTTP 200: On successful retrieval
+    """
     try:
         reviews = list(mongo.db.reviews.find().sort('created_at', -1))
         
@@ -38,6 +55,21 @@ def get_reviews():
 
 @review_bp.route('/api/reviews', methods=['POST'])
 def add_review():
+    """
+    Adds a new user review to the database.
+
+    Requires Authorization header with Bearer token.
+    Expects JSON payload with:
+    - rating (int): Review rating (required)
+    - comment (str): Review comment (required)
+
+    Returns:
+    JSON: Success message on review submission
+    HTTP 401: If user is not authenticated
+    HTTP 400: If rating or comment is missing
+    HTTP 409: If user has already submitted a review
+    HTTP 201: On successful submission
+    """
     user_data = verify_token(request)
     if not user_data:
         return jsonify({'message': 'Unauthorized'}), 401
