@@ -116,6 +116,21 @@ const CalendarDropdown = (props: DropdownProps) => {
   )
 }
 
+/**
+ * SignUpForm component for user registration.
+ *
+ * This component provides a comprehensive sign-up form with required fields for email,
+ * password, and confirm password, plus optional fields for username, gender, date of birth,
+ * and phone number. It includes password strength validation, password visibility toggles,
+ * and a date picker for date of birth. Upon successful registration, it redirects to the sign-in page.
+ *
+ * @returns {JSX.Element} A card containing the sign-up form with multiple input fields.
+ *
+ * @example
+ * ```tsx
+ * <SignUpForm />
+ * ```
+ */
 export function SignUpForm() {
   const router = useRouter();
   

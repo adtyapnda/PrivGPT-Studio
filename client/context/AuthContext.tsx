@@ -11,6 +11,23 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+/**
+ * AuthProvider component that provides authentication context to its children.
+ *
+ * This provider manages the authentication state, including storing and retrieving
+ * the auth token from localStorage. It provides login, logout functions and loading state.
+ *
+ * @param {Object} props - The component props.
+ * @param {React.ReactNode} props.children - The child components that will have access to the auth context.
+ * @returns {JSX.Element} The AuthContext provider wrapping the children.
+ *
+ * @example
+ * ```tsx
+ * <AuthProvider>
+ *   <App />
+ * </AuthProvider>
+ * ```
+ */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -45,6 +62,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+/**
+ * Custom hook to access the authentication context.
+ *
+ * This hook must be used within an AuthProvider. It provides access to the current
+ * authentication token, login/logout functions, and loading state.
+ *
+ * @returns {AuthContextType} The authentication context value containing token, login, logout, and isLoading.
+ * @throws {Error} If used outside of an AuthProvider.
+ *
+ * @example
+ * ```tsx
+ * const { token, login, logout, isLoading } = useAuth();
+ * ```
+ */
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
