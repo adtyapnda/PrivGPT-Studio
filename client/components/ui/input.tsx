@@ -2,6 +2,23 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
+/**
+ * Input component for form inputs.
+ *
+ * A styled input element that follows the design system with proper focus states,
+ * disabled states, and file input styling. Supports all standard HTML input props.
+ *
+ * @param {React.ComponentProps<"input">} props - Standard HTML input element props.
+ * @param {string} [props.className] - Additional CSS classes to apply.
+ * @param {string} [props.type] - The input type (text, password, email, etc.).
+ * @returns {JSX.Element} The styled input element.
+ *
+ * @example
+ * ```tsx
+ * <Input type="email" placeholder="Enter your email" />
+ * <Input type="password" placeholder="Enter your password" />
+ * ```
+ */
 const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
   ({ className, type, ...props }, ref) => {
     return (
