@@ -2879,25 +2879,7 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "m") {
                   Currently using: {selectedModel}
                 </p>
               </div>
-              <div className="relative mr-4 flex-1 md:flex-none md:mr-4 md:w-[280px]">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search messages..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-8 pr-8 w-full md:w-[280px] border-2 focus:border-primary"
-                />
-                {searchQuery && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-1 top-1 h-6 w-6 p-0 hover:bg-muted"
-                    onClick={() => setSearchQuery("")}
-                  >
-                    <X className="w-3 h-3" />
-                  </Button>
-                )}
-              </div>
+
             </div>
             <Badge
               variant={selectedModelType === "cloud" ? "default" : "secondary"}
@@ -2907,14 +2889,37 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "m") {
           </div>
         </div>
 
+        {/* Centered Search Box */}
+        <div className="flex justify-center p-4 border-b bg-background/50">
+          <div className="relative w-full max-w-md">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search messages..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 pr-8 w-full border-2 focus:border-primary"
+            />
+            {searchQuery && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="absolute right-1 top-1 h-6 w-6 p-0 hover:bg-muted"
+                onClick={() => setSearchQuery("")}
+              >
+                <X className="w-3 h-3" />
+              </Button>
+            )}
+          </div>
+        </div>
+
         {/* Messages */}
         <div
-          className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 
-  [&::-webkit-scrollbar-track]:bg-transparent 
-  [&::-webkit-scrollbar-thumb]:bg-gray-300 
+          className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:w-1.5
+  [&::-webkit-scrollbar-track]:bg-transparent
+  [&::-webkit-scrollbar-thumb]:bg-gray-300
   [&::-webkit-scrollbar-thumb]:rounded-sm
   [&::-webkit-scrollbar-thumb:hover]:bg-gray-400
-  dark:[&::-webkit-scrollbar-thumb]:bg-gray-600 
+  dark:[&::-webkit-scrollbar-thumb]:bg-gray-600
   dark:[&::-webkit-scrollbar-thumb:hover]:bg-gray-500 p-4 space-y-4"
         >
           {messages
