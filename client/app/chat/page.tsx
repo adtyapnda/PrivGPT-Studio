@@ -182,6 +182,7 @@ export default function ChatPage() {
     isSpeakingThis = false,
     currentCharIndex = 0,
     spokenText = "",
+    searchQuery = "",
   }: {
     content: string;
     isLoading?: boolean;
@@ -189,6 +190,7 @@ export default function ChatPage() {
     isSpeakingThis?: boolean;
     currentCharIndex?: number;
     spokenText?: string;
+    searchQuery?: string;
   }) => {
     if (isLoading || content === "...") {
       return <LoadingDots />;
@@ -225,6 +227,43 @@ export default function ChatPage() {
         </div>
       );
     }
+
+    // Helper function to highlight search terms
+    const highlightSearchTerms = (text: string, searchQuery: string) => {
+      if (!searchQuery.trim()) return text;
+
+      const lowerText = text.toLowerCase();
+      const lowerQuery = searchQuery.toLowerCase();
+      const parts: Array<{ text: string; highlight: boolean }> = [];
+      let lastIndex = 0;
+
+      let index = lowerText.indexOf(lowerQuery);
+      while (index !== -1) {
+        // Add text before the match
+        if (index > lastIndex) {
+          parts.push({ text: text.slice(lastIndex, index), highlight: false });
+        }
+        // Add the matched text
+        parts.push({ text: text.slice(index, index + searchQuery.length), highlight: true });
+        lastIndex = index + searchQuery.length;
+        index = lowerText.indexOf(lowerQuery, lastIndex);
+      }
+
+      // Add remaining text
+      if (lastIndex < text.length) {
+        parts.push({ text: text.slice(lastIndex), highlight: false });
+      }
+
+      return parts.map((part, index) => (
+        part.highlight ? (
+          <mark key={index} className="bg-yellow-200 dark:bg-yellow-600 px-0.5 rounded">
+            {part.text}
+          </mark>
+        ) : (
+          part.text
+        )
+      ));
+    };
 
     return (
       <div className="markdown-content" data-speaking={isSpeakingThis ? "true" : "false"}>
@@ -316,7 +355,7 @@ export default function ChatPage() {
                     }`}
                   {...props}
                 >
-                  {children}
+                  {highlightSearchTerms(String(children), searchQuery)}
                 </code>
               ) : (
                 // Block code
@@ -355,7 +394,7 @@ export default function ChatPage() {
                   : "text-gray-900 dark:text-gray-100"
                   }`}
               >
-                {children}
+                {highlightSearchTerms(String(children), searchQuery)}
               </h1>
             ),
             h2: ({ children }) => (
@@ -365,7 +404,7 @@ export default function ChatPage() {
                   : "text-gray-900 dark:text-gray-100"
                   }`}
               >
-                {children}
+                {highlightSearchTerms(String(children), searchQuery)}
               </h2>
             ),
             h3: ({ children }) => (
@@ -375,7 +414,7 @@ export default function ChatPage() {
                   : "text-gray-900 dark:text-gray-100"
                   }`}
               >
-                {children}
+                {highlightSearchTerms(String(children), searchQuery)}
               </h3>
             ),
             // Lists
@@ -397,7 +436,7 @@ export default function ChatPage() {
                     : "text-gray-800 dark:text-gray-200"
                 }
               >
-                {children}
+                {highlightSearchTerms(String(children), searchQuery)}
               </li>
             ),
             // Paragraphs
@@ -408,7 +447,7 @@ export default function ChatPage() {
                   : "text-gray-800 dark:text-gray-200"
                   }`}
               >
-                {children}
+                {highlightSearchTerms(String(children), searchQuery)}
               </p>
             ),
             // Blockquotes
@@ -419,7 +458,7 @@ export default function ChatPage() {
                   : "text-gray-600 dark:text-gray-400"
                   }`}
               >
-                {children}
+                {highlightSearchTerms(String(children), searchQuery)}
               </blockquote>
             ),
             // Links
@@ -434,7 +473,7 @@ export default function ChatPage() {
                     : "text-blue-600 dark:text-blue-400 hover:underline"
                 }
               >
-                {children}
+                {highlightSearchTerms(String(children), searchQuery)}
               </a>
             ),
             // Tables
@@ -450,12 +489,12 @@ export default function ChatPage() {
             ),
             th: ({ children }) => (
               <th className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-left font-semibold">
-                {children}
+                {highlightSearchTerms(String(children), searchQuery)}
               </th>
             ),
             td: ({ children }) => (
               <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">
-                {children}
+                {highlightSearchTerms(String(children), searchQuery)}
               </td>
             ),
             // Horizontal rule
@@ -470,7 +509,7 @@ export default function ChatPage() {
                   : "text-gray-900 dark:text-gray-100"
                   }`}
               >
-                {children}
+                {highlightSearchTerms(String(children), searchQuery)}
               </strong>
             ),
             // Emphasis/Italic
@@ -481,7 +520,7 @@ export default function ChatPage() {
                   : "text-gray-800 dark:text-gray-200"
                   }`}
               >
-                {children}
+                {highlightSearchTerms(String(children), searchQuery)}
               </em>
             ),
           }}
@@ -2840,15 +2879,7 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "m") {
                   Currently using: {selectedModel}
                 </p>
               </div>
-              <div className="relative mr-4 hidden md:block">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search messages..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-8 w-[200px]"
-                />
-              </div>
+
             </div>
             <Badge
               variant={selectedModelType === "cloud" ? "default" : "secondary"}
@@ -2858,14 +2889,37 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "m") {
           </div>
         </div>
 
+        {/* Centered Search Box */}
+        <div className="flex justify-center p-4 border-b bg-background/50">
+          <div className="relative w-full max-w-md">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search messages..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 pr-8 w-full border-2 focus:border-primary"
+            />
+            {searchQuery && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="absolute right-1 top-1 h-6 w-6 p-0 hover:bg-muted"
+                onClick={() => setSearchQuery("")}
+              >
+                <X className="w-3 h-3" />
+              </Button>
+            )}
+          </div>
+        </div>
+
         {/* Messages */}
         <div
-          className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 
-  [&::-webkit-scrollbar-track]:bg-transparent 
-  [&::-webkit-scrollbar-thumb]:bg-gray-300 
+          className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:w-1.5
+  [&::-webkit-scrollbar-track]:bg-transparent
+  [&::-webkit-scrollbar-thumb]:bg-gray-300
   [&::-webkit-scrollbar-thumb]:rounded-sm
   [&::-webkit-scrollbar-thumb:hover]:bg-gray-400
-  dark:[&::-webkit-scrollbar-thumb]:bg-gray-600 
+  dark:[&::-webkit-scrollbar-thumb]:bg-gray-600
   dark:[&::-webkit-scrollbar-thumb:hover]:bg-gray-500 p-4 space-y-4"
         >
           {messages
@@ -2917,6 +2971,7 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "m") {
                         isSpeakingThis={speakingMessageId === message.id}
                         currentCharIndex={currentCharIndex}
                         spokenText={spokenText}
+                        searchQuery={searchQuery}
                       />
                     </div>
                     <p
