@@ -1452,8 +1452,6 @@ export default function ChatPage() {
         fallbackToGemini(streamedContent);
       }
 
-      setIsStreaming(false);
-      setAbortController(null);
       setLatency(latencyValue);
     } catch (error: any) {
       if (error.name === "AbortError") {
@@ -1485,7 +1483,7 @@ export default function ChatPage() {
           ),
         );
       }
-
+    } finally {
       setIsStreaming(false);
       setAbortController(null);
     }
