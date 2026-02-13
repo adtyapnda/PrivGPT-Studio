@@ -36,6 +36,20 @@ const formSchema = z.object({
   password: z.string().min(1, { message: "Password is required." }),
 });
 
+/**
+ * SignInForm component for user authentication.
+ *
+ * This component provides a sign-in form with email and password fields, including
+ * password visibility toggle and form validation. It handles user login by making
+ * an API call to the backend and manages authentication state through the AuthContext.
+ *
+ * @returns {JSX.Element} A card containing the sign-in form with email and password fields.
+ *
+ * @example
+ * ```tsx
+ * <SignInForm />
+ * ```
+ */
 export function SignInForm() {
   const router = useRouter();
   const searchParams = useSearchParams();

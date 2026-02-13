@@ -25,3 +25,5 @@ class Config:
         PLUGINS_DIRS = _env_dirs.split(',')
         
     ENABLED_PLUGINS = os.getenv("ENABLED_PLUGINS", None) # Comma-separated list of plugin folder names
+    MAX_MESSAGES_PER_SESSION = int(os.getenv("MAX_MESSAGES_PER_SESSION", 10))
+    CONTACT_EMAIL = os.getenv("CONTACT_EMAIL", "support@privgpt-studio.com")

@@ -39,6 +39,38 @@ export interface ButtonProps
   asChild?: boolean
 }
 
+/**
+ * Button component with multiple variants and sizes.
+ *
+ * A versatile button component built on top of Radix UI's Slot primitive,
+ * supporting various visual variants and sizes. Can be rendered as a button
+ * or as a child component when using the asChild prop.
+ *
+ * @param {ButtonProps} props - The props for the Button component.
+ * @param {boolean} [props.asChild=false] - If true, renders the button as a Slot for composition.
+ * @param {"default" | "destructive" | "outline" | "secondary" | "ghost" | "link"} [props.variant="default"] - The visual variant of the button.
+ * @param {"default" | "sm" | "lg" | "icon"} [props.size="default"] - The size variant of the button.
+ * @param {string} [props.className] - Additional CSS classes to apply.
+ * @param {React.ButtonHTMLAttributes<HTMLButtonElement>} props - Standard button element props.
+ * @returns {JSX.Element} The rendered button element.
+ *
+ * @example
+ * ```tsx
+ * // Default button
+ * <Button>Click me</Button>
+ *
+ * // Destructive variant
+ * <Button variant="destructive">Delete</Button>
+ *
+ * // Large outline button
+ * <Button variant="outline" size="lg">Outline</Button>
+ *
+ * // As child component
+ * <Button asChild>
+ *   <Link href="/page">Go to page</Link>
+ * </Button>
+ * ```
+ */
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
     const Comp = asChild ? Slot : "button"

@@ -2,11 +2,29 @@ from flask import Blueprint, request, jsonify, current_app
 from api import mongo, bcrypt
 import jwt
 import datetime
+from bson import ObjectId
 
 auth_bp = Blueprint('auth', __name__)
 
 @auth_bp.route('/api/register', methods=['POST'])
 def register():
+    """
+    Registers a new user with email and password.
+
+    Expects JSON payload with:
+    - email (str): User's email address (required)
+    - password (str): User's password (required)
+    - username (str): Optional username, defaults to email prefix
+    - gender (str): Optional gender
+    - dob (str): Optional date of birth
+    - phone (str): Optional phone number
+
+    Returns:
+    JSON: Success message on successful registration
+    HTTP 400: If email or password is missing
+    HTTP 409: If user already exists
+    HTTP 201: On successful registration
+    """
     data = request.get_json()
     
     if not data or not data.get('email') or not data.get('password'):
@@ -49,6 +67,19 @@ def register():
 
 @auth_bp.route('/api/login', methods=['POST'])
 def login():
+    """
+    Authenticates a user with email and password.
+
+    Expects JSON payload with:
+    - email (str): User's email address (required)
+    - password (str): User's password (required)
+
+    Returns:
+    JSON: JWT token and success message on successful login
+    HTTP 400: If email or password is missing
+    HTTP 401: If credentials are invalid
+    HTTP 200: On successful login
+    """
     data = request.get_json()
     
     if not data or not data.get('email') or not data.get('password'):
@@ -70,3 +101,103 @@ def login():
     }, current_app.config['SECRET_KEY'], algorithm='HS256')
     
     return jsonify({'token': token, 'message': 'Login successful'}), 200
+
+@auth_bp.route('/api/profile', methods=['GET'])
+def get_profile():
+    """
+    Retrieves the authenticated user's profile information.
+
+    Requires Authorization header with Bearer token.
+
+    Returns:
+    JSON: User profile data (username, email, gender, dob, phone)
+    HTTP 401: If token is missing or invalid
+    HTTP 404: If user not found
+    HTTP 200: On successful retrieval
+    """
+    token = None
+    if 'Authorization' in request.headers:
+        auth_header = request.headers['Authorization']
+        if auth_header.startswith('Bearer '):
+            token = auth_header.split(' ')[1]
+    
+    if not token:
+        return jsonify({'message': 'Token is missing'}), 401
+        
+    try:
+        data = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=['HS256'])
+        user_id = data['user_id']
+        user = mongo.db.users.find_one({'_id': ObjectId(user_id)})
+        
+        if not user:
+            return jsonify({'message': 'User not found'}), 404
+            
+        return jsonify({
+            'username': user.get('username'),
+            'email': user.get('email'),
+            'gender': user.get('gender'),
+            'dob': user.get('dob'),
+            'phone': user.get('phone'),
+        }), 200
+    except Exception as e:
+        return jsonify({'message': 'Invalid token', 'error': str(e)}), 401
+    
+@auth_bp.route('/api/profile', methods=['PUT'])
+def update_profile():
+    """
+    Updates the authenticated user's profile information.
+
+    Requires Authorization header with Bearer token.
+    Expects JSON payload with optional fields:
+    - username (str): New username
+    - gender (str): New gender
+    - dob (str): New date of birth
+    - phone (str): New phone number
+
+    Returns:
+    JSON: Success message on update
+    HTTP 401: If token is missing or invalid
+    HTTP 400: If no valid fields provided
+    HTTP 200: On successful update
+    """
+    token = None
+    if 'Authorization' in request.headers:
+        auth_header = request.headers['Authorization']
+        if auth_header.startswith('Bearer '):
+            token = auth_header.split(' ')[1]
+    
+    if not token:
+        return jsonify({'message': 'Token is missing'}), 401
+        
+    try:
+        data = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=['HS256'])
+        user_id = data['user_id']
+        
+        update_data = request.get_json()
+        if not update_data:
+             return jsonify({'message': 'No data provided'}), 400
+
+        allowed_fields = ['username', 'gender', 'dob', 'phone']
+        
+        updates = {}
+        for field in allowed_fields:
+            if field in update_data:
+                updates[field] = update_data[field]
+        
+        if not updates:
+            return jsonify({'message': 'No valid fields to update'}), 400
+
+        result = mongo.db.users.update_one(
+            {'_id': ObjectId(user_id)},
+            {'$set': updates}
+        )
+        
+        if result.modified_count == 0:
+             return jsonify({'message': 'Profile updated (no changes detected)'}), 200
+
+        return jsonify({'message': 'Profile updated successfully'}), 200
+
+    except jwt.ExpiredSignatureError:
+        return jsonify({'message': 'Token has expired'}), 401
+    except Exception as e:
+        return jsonify({'message': 'Invalid token', 'error': str(e)}), 401

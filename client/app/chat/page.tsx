@@ -32,7 +32,6 @@ import {
   Settings,
   Info,
   MessageSquare,
-  Zap,
   Home,
   Globe,
   Cpu,
@@ -115,7 +114,7 @@ import { useRouter } from "next/navigation";
 
 export default function ChatPage() {
   const { darkMode } = useTheme();
-  const { token, logout, isLoading } = useAuth();
+  const { token, isLoading } = useAuth();
   const router = useRouter();
 
   // Loading dots animation component
@@ -159,14 +158,19 @@ export default function ChatPage() {
     return (
       <>
         {segments.map((segment, index) => {
-          const isCurrentWord = shouldHighlight && charIndex >= segment.start && charIndex < segment.end && /\S/.test(segment.text);
+          const isCurrentWord =
+            shouldHighlight &&
+            charIndex >= segment.start &&
+            charIndex < segment.end &&
+            /\S/.test(segment.text);
           return (
             <span
               key={index}
-              className={`transition-colors duration-150 ${isCurrentWord
-                ? 'bg-sky-100/90 dark:bg-sky-300/40 rounded px-0.5'
-                : ''
-                }`}
+              className={`transition-colors duration-150 ${
+                isCurrentWord
+                  ? "bg-sky-100/90 dark:bg-sky-300/40 rounded px-0.5"
+                  : ""
+              }`}
             >
               {segment.text}
             </span>
@@ -183,6 +187,7 @@ export default function ChatPage() {
     isSpeakingThis = false,
     currentCharIndex = 0,
     spokenText = "",
+    searchQuery = "",
   }: {
     content: string;
     isLoading?: boolean;
@@ -190,6 +195,7 @@ export default function ChatPage() {
     isSpeakingThis?: boolean;
     currentCharIndex?: number;
     spokenText?: string;
+    searchQuery?: string;
   }) => {
     if (isLoading || content === "...") {
       return <LoadingDots />;
@@ -197,7 +203,7 @@ export default function ChatPage() {
 
     // If TTS is active, render the stripped text with word highlighting and preserved line breaks
     if (isSpeakingThis && spokenText) {
-      const lines = spokenText.split('\n');
+      const lines = spokenText.split("\n");
       let globalCharOffset = 0;
 
       return (
@@ -207,18 +213,25 @@ export default function ChatPage() {
             const lineEnd = globalCharOffset + line.length;
 
             // Calculate relative position for highlighting within this line
-            const relativeCharIndex = currentCharIndex >= lineStart && currentCharIndex < lineEnd
-              ? currentCharIndex - lineStart
-              : -1; // -1 means no highlighting in this line
+            const relativeCharIndex =
+              currentCharIndex >= lineStart && currentCharIndex < lineEnd
+                ? currentCharIndex - lineStart
+                : -1; // -1 means no highlighting in this line
 
-            const lineElement = line.length > 0
-              ? wrapTextWithHighlight(line, relativeCharIndex)
-              : <span>&nbsp;</span>;
+            const lineElement =
+              line.length > 0 ? (
+                wrapTextWithHighlight(line, relativeCharIndex)
+              ) : (
+                <span>&nbsp;</span>
+              );
 
             globalCharOffset = lineEnd + 1; // +1 for the newline character
 
             return (
-              <div key={lineIndex} className="mb-3 leading-relaxed text-gray-800 dark:text-gray-200">
+              <div
+                key={lineIndex}
+                className="mb-3 leading-relaxed text-gray-800 dark:text-gray-200"
+              >
                 {lineElement}
               </div>
             );
@@ -227,8 +240,54 @@ export default function ChatPage() {
       );
     }
 
+    // Helper function to highlight search terms
+    const highlightSearchTerms = (text: string, searchQuery: string) => {
+      if (!searchQuery.trim()) return text;
+
+      const lowerText = text.toLowerCase();
+      const lowerQuery = searchQuery.toLowerCase();
+      const parts: Array<{ text: string; highlight: boolean }> = [];
+      let lastIndex = 0;
+
+      let index = lowerText.indexOf(lowerQuery);
+      while (index !== -1) {
+        // Add text before the match
+        if (index > lastIndex) {
+          parts.push({ text: text.slice(lastIndex, index), highlight: false });
+        }
+        // Add the matched text
+        parts.push({
+          text: text.slice(index, index + searchQuery.length),
+          highlight: true,
+        });
+        lastIndex = index + searchQuery.length;
+        index = lowerText.indexOf(lowerQuery, lastIndex);
+      }
+
+      // Add remaining text
+      if (lastIndex < text.length) {
+        parts.push({ text: text.slice(lastIndex), highlight: false });
+      }
+
+      return parts.map((part, index) =>
+        part.highlight ? (
+          <mark
+            key={index}
+            className="bg-yellow-200 dark:bg-yellow-600 px-0.5 rounded"
+          >
+            {part.text}
+          </mark>
+        ) : (
+          part.text
+        ),
+      );
+    };
+
     return (
-      <div className="markdown-content" data-speaking={isSpeakingThis ? "true" : "false"}>
+      <div
+        className="markdown-content"
+        data-speaking={isSpeakingThis ? "true" : "false"}
+      >
         <Head>
           <title>
             AI Chat | PrivGPT Studio - Chat with Local & Cloud AI Models
@@ -311,13 +370,14 @@ export default function ChatPage() {
               return isInline ? (
                 // Inline code
                 <code
-                  className={`px-1.5 py-0.5 rounded text-sm font-mono ${isUser
-                    ? "bg-primary-foreground/10 text-primary-foreground"
-                    : "bg-gray-100 dark:bg-gray-800 text-red-600 dark:text-red-400"
-                    }`}
+                  className={`px-1.5 py-0.5 rounded text-sm font-mono ${
+                    isUser
+                      ? "bg-primary-foreground/10 text-primary-foreground"
+                      : "bg-gray-100 dark:bg-gray-800 text-red-600 dark:text-red-400"
+                  }`}
                   {...props}
                 >
-                  {children}
+                  {highlightSearchTerms(String(children), searchQuery)}
                 </code>
               ) : (
                 // Block code
@@ -327,7 +387,7 @@ export default function ChatPage() {
                     <button
                       onClick={() => {
                         navigator.clipboard.writeText(
-                          String(children).replace(/\n$/, "")
+                          String(children).replace(/\n$/, ""),
                         );
                         toast.success("Code copied to clipboard!");
                       }}
@@ -351,32 +411,35 @@ export default function ChatPage() {
             // Headers
             h1: ({ children }) => (
               <h1
-                className={`text-2xl font-bold mt-6 mb-4 ${isUser
-                  ? "text-primary-foreground"
-                  : "text-gray-900 dark:text-gray-100"
-                  }`}
+                className={`text-2xl font-bold mt-6 mb-4 ${
+                  isUser
+                    ? "text-primary-foreground"
+                    : "text-gray-900 dark:text-gray-100"
+                }`}
               >
-                {children}
+                {highlightSearchTerms(String(children), searchQuery)}
               </h1>
             ),
             h2: ({ children }) => (
               <h2
-                className={`text-xl font-semibold mt-5 mb-3 ${isUser
-                  ? "text-primary-foreground"
-                  : "text-gray-900 dark:text-gray-100"
-                  }`}
+                className={`text-xl font-semibold mt-5 mb-3 ${
+                  isUser
+                    ? "text-primary-foreground"
+                    : "text-gray-900 dark:text-gray-100"
+                }`}
               >
-                {children}
+                {highlightSearchTerms(String(children), searchQuery)}
               </h2>
             ),
             h3: ({ children }) => (
               <h3
-                className={`text-lg font-semibold mt-4 mb-2 ${isUser
-                  ? "text-primary-foreground"
-                  : "text-gray-900 dark:text-gray-100"
-                  }`}
+                className={`text-lg font-semibold mt-4 mb-2 ${
+                  isUser
+                    ? "text-primary-foreground"
+                    : "text-gray-900 dark:text-gray-100"
+                }`}
               >
-                {children}
+                {highlightSearchTerms(String(children), searchQuery)}
               </h3>
             ),
             // Lists
@@ -398,29 +461,31 @@ export default function ChatPage() {
                     : "text-gray-800 dark:text-gray-200"
                 }
               >
-                {children}
+                {highlightSearchTerms(String(children), searchQuery)}
               </li>
             ),
             // Paragraphs
             p: ({ children }) => (
               <p
-                className={`mb-3 leading-relaxed ${isUser
-                  ? "text-primary-foreground"
-                  : "text-gray-800 dark:text-gray-200"
-                  }`}
+                className={`mb-3 leading-relaxed ${
+                  isUser
+                    ? "text-primary-foreground"
+                    : "text-gray-800 dark:text-gray-200"
+                }`}
               >
-                {children}
+                {highlightSearchTerms(String(children), searchQuery)}
               </p>
             ),
             // Blockquotes
             blockquote: ({ children }) => (
               <blockquote
-                className={`border-l-4 border-gray-300 dark:border-gray-600 pl-4 my-4 italic ${isUser
-                  ? "text-primary-foreground/80"
-                  : "text-gray-600 dark:text-gray-400"
-                  }`}
+                className={`border-l-4 border-gray-300 dark:border-gray-600 pl-4 my-4 italic ${
+                  isUser
+                    ? "text-primary-foreground/80"
+                    : "text-gray-600 dark:text-gray-400"
+                }`}
               >
-                {children}
+                {highlightSearchTerms(String(children), searchQuery)}
               </blockquote>
             ),
             // Links
@@ -435,7 +500,7 @@ export default function ChatPage() {
                     : "text-blue-600 dark:text-blue-400 hover:underline"
                 }
               >
-                {children}
+                {highlightSearchTerms(String(children), searchQuery)}
               </a>
             ),
             // Tables
@@ -451,12 +516,12 @@ export default function ChatPage() {
             ),
             th: ({ children }) => (
               <th className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-left font-semibold">
-                {children}
+                {highlightSearchTerms(String(children), searchQuery)}
               </th>
             ),
             td: ({ children }) => (
               <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">
-                {children}
+                {highlightSearchTerms(String(children), searchQuery)}
               </td>
             ),
             // Horizontal rule
@@ -466,23 +531,25 @@ export default function ChatPage() {
             // Strong/Bold
             strong: ({ children }) => (
               <strong
-                className={`font-bold ${isUser
-                  ? "text-primary-foreground"
-                  : "text-gray-900 dark:text-gray-100"
-                  }`}
+                className={`font-bold ${
+                  isUser
+                    ? "text-primary-foreground"
+                    : "text-gray-900 dark:text-gray-100"
+                }`}
               >
-                {children}
+                {highlightSearchTerms(String(children), searchQuery)}
               </strong>
             ),
             // Emphasis/Italic
             em: ({ children }) => (
               <em
-                className={`italic ${isUser
-                  ? "text-primary-foreground"
-                  : "text-gray-800 dark:text-gray-200"
-                  }`}
+                className={`italic ${
+                  isUser
+                    ? "text-primary-foreground"
+                    : "text-gray-800 dark:text-gray-200"
+                }`}
               >
-                {children}
+                {highlightSearchTerms(String(children), searchQuery)}
               </em>
             ),
           }}
@@ -511,7 +578,7 @@ export default function ChatPage() {
   const [cloudModels, setCloudModels] = useState<string[]>([]);
   const [selectedModel, setSelectedModel] = useState<string>("");
   const [selectedModelType, setSelectedModelType] = useState<"local" | "cloud">(
-    "local"
+    "local",
   );
   const [isChatSessionsCollapsed, setIsChatSessionsCollapsed] = useState(false);
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
@@ -554,7 +621,7 @@ export default function ChatPage() {
     useState<SpeechSynthesisVoice | null>(null);
   const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
   const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(
-    null
+    null,
   );
   const [currentCharIndex, setCurrentCharIndex] = useState<number>(0);
   const [spokenText, setSpokenText] = useState<string>("");
@@ -562,6 +629,9 @@ export default function ChatPage() {
   const canceledByUserRef = useRef<boolean>(false);
   // Model Configuration Modal & Parameters
   const [configureModelModal, setConfigureModelModal] = useState(false);
+  const [modelInfoModal, setModelInfoModal] = useState(false);
+  const [modelDetails, setModelDetails] = useState<any>(null);
+  const [isFetchingModelDetails, setIsFetchingModelDetails] = useState(false);
   const [temperature, setTemperature] = useState(0.7);
   const [topP, setTopP] = useState(0.9);
   const [topK, setTopK] = useState(40);
@@ -610,7 +680,7 @@ export default function ChatPage() {
             v.find(
               (voice) =>
                 voice.lang.toLowerCase().startsWith("en") &&
-                /google.*english|microsoft.*english/i.test(voice.name)
+                /google.*english|microsoft.*english/i.test(voice.name),
             ) ||
             v.find((voice) => voice.lang.toLowerCase().startsWith("en")) ||
             v[0];
@@ -630,6 +700,53 @@ export default function ChatPage() {
       setSpeechSupported(false);
     }
   }, [selectedVoice]);
+
+  const handleFetchModelInfo = async () => {
+    if (!selectedModel) {
+      toast.error("No model selected.");
+      return;
+    }
+
+    setIsFetchingModelDetails(true);
+    setModelDetails(null);
+    setModelInfoModal(true);
+
+    try {
+      console.log(selectedModel, selectedModelType);
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/model_info`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({
+            model_name: selectedModel,
+            model_type: selectedModelType,
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch model details");
+      }
+
+      const data = await response.json();
+      setModelDetails(data);
+    } catch (error) {
+      console.error("Error fetching model info:", error);
+      toast.error("Could not load model details.");
+    } finally {
+      setIsFetchingModelDetails(false);
+    }
+  };
+
+  useEffect(() => {
+    if (modelInfoModal && selectedModel) {
+      handleFetchModelInfo();
+    }
+  }, [selectedModel]);
 
   // Utility: strip markdown and code for clearer TTS
   const stripMarkdown = (md: string) => {
@@ -709,7 +826,7 @@ export default function ChatPage() {
     };
 
     utterance.onboundary = (event: SpeechSynthesisEvent) => {
-      if (event.name === 'word') {
+      if (event.name === "word") {
         setCurrentCharIndex(event.charIndex);
       }
     };
@@ -724,7 +841,10 @@ export default function ChatPage() {
     };
     utterance.onerror = (e: any) => {
       const code = e?.error || e?.name || "";
-      const wasCanceled = canceledByUserRef.current || code === "canceled" || code === "interrupted";
+      const wasCanceled =
+        canceledByUserRef.current ||
+        code === "canceled" ||
+        code === "interrupted";
       if (!wasCanceled) {
         console.error("TTS error:", e);
         toast.error("Failed to speak the message.");
@@ -766,7 +886,7 @@ export default function ChatPage() {
         if (typeof window !== "undefined" && "speechSynthesis" in window) {
           window.speechSynthesis.cancel();
         }
-      } catch { }
+      } catch {}
     };
   }, []);
 
@@ -792,7 +912,7 @@ export default function ChatPage() {
     const fetchModels = async () => {
       try {
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_BACKEND_URL}/models`
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/models`,
         );
         const data = await response.json();
         const local: string[] = data.local_models || [];
@@ -806,12 +926,12 @@ export default function ChatPage() {
             ? localStorage.getItem("selected_model_name")
             : null;
         const storedType =
-          (typeof window !== "undefined"
+          typeof window !== "undefined"
             ? (localStorage.getItem("selected_model_type") as
-              | "local"
-              | "cloud"
-              | null)
-            : null);
+                | "local"
+                | "cloud"
+                | null)
+            : null;
 
         // Always select the first available model as default
         let modelToSelect = "";
@@ -853,7 +973,7 @@ export default function ChatPage() {
     const geminiAvailable = cloudModels.includes("gemini");
     if (geminiAvailable) {
       toast.error(
-        `Local model unavailable. Switched to Gemini. Error: ${errorText}`
+        `Local model unavailable. Switched to Gemini. Error: ${errorText}`,
       );
       setSelectedModel("gemini");
       setSelectedModelType("cloud");
@@ -865,7 +985,7 @@ export default function ChatPage() {
       }
     } else {
       toast.error(
-        `Local model unavailable and Gemini not configured. Error: ${errorText}`
+        `Local model unavailable and Gemini not configured. Error: ${errorText}`,
       );
     }
   };
@@ -887,7 +1007,7 @@ export default function ChatPage() {
                 Authorization: `Bearer ${token}`,
               },
               body: JSON.stringify({ session_ids: [] }), // Backend ignores this for logged-in users
-            }
+            },
           );
 
           if (!response.ok) throw new Error("Failed to fetch session history");
@@ -906,7 +1026,7 @@ export default function ChatPage() {
                   lastMessage: lastMsg,
                   sessionName: session.session_name || lastMsg,
                 };
-              }
+              },
             );
 
             setChatSessions([...transformedSessions]);
@@ -933,19 +1053,21 @@ export default function ChatPage() {
                   id: msg.id || (index + 2).toString(),
                   content: msg.content,
                   role: normalizedRole,
-                  timestamp: msg.timestamp ? new Date(msg.timestamp) : new Date(),
+                  timestamp: msg.timestamp
+                    ? new Date(msg.timestamp)
+                    : new Date(),
                   ...(msg.uploaded_file
                     ? {
-                      file: {
-                        name: msg.uploaded_file.name,
-                        size: msg.uploaded_file.size,
-                        type: msg.uploaded_file.type,
-                        file: msg.uploaded_file.file,
-                      } as UploadedFile,
-                    }
+                        file: {
+                          name: msg.uploaded_file.name,
+                          size: msg.uploaded_file.size,
+                          type: msg.uploaded_file.type,
+                          file: msg.uploaded_file.file,
+                        } as UploadedFile,
+                      }
                     : {}),
                 };
-              }
+              },
             );
 
             setMessages([welcomeMessage, ...(formattedMessages || [])]);
@@ -1095,15 +1217,15 @@ export default function ChatPage() {
           body: formData,
         });
         if (response.status === 403) {
-           const errorData = await response.json();
-           if (errorData.limit_reached) {
-             setIsLimitReached(true);
-             toast.error(errorData.error);
-             setIsTyping(false);
-             // Optional: Remove the optimistic user message since it wasn't processed
-             setMessages((prev) => prev.slice(0, -1)); 
-             return;
-           }
+          const errorData = await response.json();
+          if (errorData.limit_reached) {
+            setIsLimitReached(true);
+            toast.error(errorData.error);
+            setIsTyping(false);
+            // Optional: Remove the optimistic user message since it wasn't processed
+            setMessages((prev) => prev.slice(0, -1));
+            return;
+          }
         }
 
         if (!response.ok) {
@@ -1234,7 +1356,12 @@ export default function ChatPage() {
                       streamedContent += data.text;
                     }
                     // Detect server-sent fallback marker
-                    if (data.text && data.text.includes("[Local model failed, switching to gemini")) {
+                    if (
+                      data.text &&
+                      data.text.includes(
+                        "[Local model failed, switching to gemini",
+                      )
+                    ) {
                       fallbackToGemini("Local model failed during streaming");
                     }
                     // Update the temporary message with streamed content
@@ -1242,8 +1369,8 @@ export default function ChatPage() {
                       prev.map((msg) =>
                         msg.id === tempAssistantMessage.id
                           ? { ...msg, content: streamedContent }
-                          : msg
-                      )
+                          : msg,
+                      ),
                     );
                     break;
 
@@ -1268,15 +1395,15 @@ export default function ChatPage() {
                       prev.map((msg) =>
                         msg.id === tempAssistantMessage.id
                           ? {
-                            ...msg,
-                            content: streamedContent,
-                            timestamp: new Date(data.timestamp),
-                            versions: [streamedContent],
-                            versionTimestamps: [new Date(data.timestamp)],
-                            currentVersionIndex: 0,
-                          }
-                          : msg
-                      )
+                              ...msg,
+                              content: streamedContent,
+                              timestamp: new Date(data.timestamp),
+                              versions: [streamedContent],
+                              versionTimestamps: [new Date(data.timestamp)],
+                              currentVersionIndex: 0,
+                            }
+                          : msg,
+                      ),
                     );
 
                     latencyValue = data.latency?.toString() || "0";
@@ -1284,18 +1411,18 @@ export default function ChatPage() {
 
                   case "error":
                     if (data.limit_reached) {
-                        setIsLimitReached(true);
-                        toast.error(data.message);
-                        // Stop the stream
-                        stopGeneration();
+                      setIsLimitReached(true);
+                      toast.error(data.message);
+                      // Stop the stream
+                      stopGeneration();
                     }
                     streamedContent = data.message;
                     setMessages((prev) =>
                       prev.map((msg) =>
                         msg.id === tempAssistantMessage.id
                           ? { ...msg, content: streamedContent }
-                          : msg
-                      )
+                          : msg,
+                      ),
                     );
                     break;
                 }
@@ -1336,12 +1463,12 @@ export default function ChatPage() {
           prev.map((msg) =>
             msg.id === tempAssistantMessage.id
               ? {
-                ...msg,
-                content:
-                  (msg.content || "") + "\n\n[Generation stopped by user]",
-              }
-              : msg
-          )
+                  ...msg,
+                  content:
+                    (msg.content || "") + "\n\n[Generation stopped by user]",
+                }
+              : msg,
+          ),
         );
       } else {
         console.error("Failed to receive response from AI", error);
@@ -1351,11 +1478,11 @@ export default function ChatPage() {
           prev.map((msg) =>
             msg.id === tempAssistantMessage.id
               ? {
-                ...msg,
-                content: "Failed to get response from AI. Please try again.",
-              }
-              : msg
-          )
+                  ...msg,
+                  content: "Failed to get response from AI. Please try again.",
+                }
+              : msg,
+          ),
         );
       }
 
@@ -1365,14 +1492,23 @@ export default function ChatPage() {
   };
 
   // Handle retry/regenerate response for an assistant message with a different model
-  const handleRetryWithModel = async (assistantMessage: Message, modelName: string, modelType: "local" | "cloud") => {
+  const handleRetryWithModel = async (
+    assistantMessage: Message,
+    modelName: string,
+    modelType: "local" | "cloud",
+  ) => {
     // Find the user message that prompted this assistant message
-    const messageIndex = messages.findIndex((m) => m.id === assistantMessage.id);
+    const messageIndex = messages.findIndex(
+      (m) => m.id === assistantMessage.id,
+    );
     if (messageIndex === -1 || messageIndex === 0) return;
 
     // Find the previous user message
     let userMessageIndex = messageIndex - 1;
-    while (userMessageIndex >= 0 && messages[userMessageIndex].role !== "user") {
+    while (
+      userMessageIndex >= 0 &&
+      messages[userMessageIndex].role !== "user"
+    ) {
       userMessageIndex--;
     }
 
@@ -1438,8 +1574,12 @@ export default function ChatPage() {
         const bot_response = data.response || "No Reply";
 
         // Initialize versions array if not exists
-        const versions = assistantMessage.versions || [assistantMessage.content];
-        const versionTimestamps = assistantMessage.versionTimestamps || [assistantMessage.timestamp];
+        const versions = assistantMessage.versions || [
+          assistantMessage.content,
+        ];
+        const versionTimestamps = assistantMessage.versionTimestamps || [
+          assistantMessage.timestamp,
+        ];
         versions.push(bot_response);
         versionTimestamps.push(new Date(data.timestamp));
 
@@ -1448,15 +1588,15 @@ export default function ChatPage() {
           prev.map((msg) =>
             msg.id === assistantMessage.id
               ? {
-                ...msg,
-                content: bot_response,
-                versions: versions,
-                versionTimestamps: versionTimestamps,
-                currentVersionIndex: versions.length - 1,
-                timestamp: new Date(data.timestamp),
-              }
-              : msg
-          )
+                  ...msg,
+                  content: bot_response,
+                  versions: versions,
+                  versionTimestamps: versionTimestamps,
+                  currentVersionIndex: versions.length - 1,
+                  timestamp: new Date(data.timestamp),
+                }
+              : msg,
+          ),
         );
 
         setLatency(data.latency.toString());
@@ -1490,8 +1630,8 @@ export default function ChatPage() {
         // Temporarily update message to show loading
         setMessages((prev) =>
           prev.map((msg) =>
-            msg.id === assistantMessage.id ? { ...msg, content: "..." } : msg
-          )
+            msg.id === assistantMessage.id ? { ...msg, content: "..." } : msg,
+          ),
         );
 
         while (true) {
@@ -1518,8 +1658,8 @@ export default function ChatPage() {
                       prev.map((msg) =>
                         msg.id === assistantMessage.id
                           ? { ...msg, content: streamedContent }
-                          : msg
-                      )
+                          : msg,
+                      ),
                     );
                     break;
 
@@ -1536,8 +1676,8 @@ export default function ChatPage() {
                       prev.map((msg) =>
                         msg.id === assistantMessage.id
                           ? { ...msg, content: streamedContent }
-                          : msg
-                      )
+                          : msg,
+                      ),
                     );
                     break;
                 }
@@ -1551,7 +1691,9 @@ export default function ChatPage() {
 
       // Initialize versions array if not exists
       const versions = assistantMessage.versions || [assistantMessage.content];
-      const versionTimestamps = assistantMessage.versionTimestamps || [assistantMessage.timestamp];
+      const versionTimestamps = assistantMessage.versionTimestamps || [
+        assistantMessage.timestamp,
+      ];
       versions.push(streamedContent);
       versionTimestamps.push(timestampValue);
 
@@ -1560,15 +1702,15 @@ export default function ChatPage() {
         prev.map((msg) =>
           msg.id === assistantMessage.id
             ? {
-              ...msg,
-              content: streamedContent,
-              versions: versions,
-              versionTimestamps: versionTimestamps,
-              currentVersionIndex: versions.length - 1,
-              timestamp: timestampValue,
-            }
-            : msg
-        )
+                ...msg,
+                content: streamedContent,
+                versions: versions,
+                versionTimestamps: versionTimestamps,
+                currentVersionIndex: versions.length - 1,
+                timestamp: timestampValue,
+              }
+            : msg,
+        ),
       );
 
       setLatency(latencyValue);
@@ -1582,12 +1724,17 @@ export default function ChatPage() {
   // Handle retry/regenerate response for an assistant message
   const handleRetry = async (assistantMessage: Message) => {
     // Find the user message that prompted this assistant message
-    const messageIndex = messages.findIndex((m) => m.id === assistantMessage.id);
+    const messageIndex = messages.findIndex(
+      (m) => m.id === assistantMessage.id,
+    );
     if (messageIndex === -1 || messageIndex === 0) return;
 
     // Find the previous user message
     let userMessageIndex = messageIndex - 1;
-    while (userMessageIndex >= 0 && messages[userMessageIndex].role !== "user") {
+    while (
+      userMessageIndex >= 0 &&
+      messages[userMessageIndex].role !== "user"
+    ) {
       userMessageIndex--;
     }
 
@@ -1653,8 +1800,12 @@ export default function ChatPage() {
         const bot_response = data.response || "No Reply";
 
         // Initialize versions array if not exists
-        const versions = assistantMessage.versions || [assistantMessage.content];
-        const versionTimestamps = assistantMessage.versionTimestamps || [assistantMessage.timestamp];
+        const versions = assistantMessage.versions || [
+          assistantMessage.content,
+        ];
+        const versionTimestamps = assistantMessage.versionTimestamps || [
+          assistantMessage.timestamp,
+        ];
         versions.push(bot_response);
         versionTimestamps.push(new Date(data.timestamp));
 
@@ -1663,15 +1814,15 @@ export default function ChatPage() {
           prev.map((msg) =>
             msg.id === assistantMessage.id
               ? {
-                ...msg,
-                content: bot_response,
-                versions: versions,
-                versionTimestamps: versionTimestamps,
-                currentVersionIndex: versions.length - 1,
-                timestamp: new Date(data.timestamp),
-              }
-              : msg
-          )
+                  ...msg,
+                  content: bot_response,
+                  versions: versions,
+                  versionTimestamps: versionTimestamps,
+                  currentVersionIndex: versions.length - 1,
+                  timestamp: new Date(data.timestamp),
+                }
+              : msg,
+          ),
         );
 
         setLatency(data.latency.toString());
@@ -1705,8 +1856,8 @@ export default function ChatPage() {
         // Temporarily update message to show loading
         setMessages((prev) =>
           prev.map((msg) =>
-            msg.id === assistantMessage.id ? { ...msg, content: "..." } : msg
-          )
+            msg.id === assistantMessage.id ? { ...msg, content: "..." } : msg,
+          ),
         );
 
         while (true) {
@@ -1733,8 +1884,8 @@ export default function ChatPage() {
                       prev.map((msg) =>
                         msg.id === assistantMessage.id
                           ? { ...msg, content: streamedContent }
-                          : msg
-                      )
+                          : msg,
+                      ),
                     );
                     break;
 
@@ -1751,8 +1902,8 @@ export default function ChatPage() {
                       prev.map((msg) =>
                         msg.id === assistantMessage.id
                           ? { ...msg, content: streamedContent }
-                          : msg
-                      )
+                          : msg,
+                      ),
                     );
                     break;
                 }
@@ -1766,7 +1917,9 @@ export default function ChatPage() {
 
       // Initialize versions array if not exists
       const versions = assistantMessage.versions || [assistantMessage.content];
-      const versionTimestamps = assistantMessage.versionTimestamps || [assistantMessage.timestamp];
+      const versionTimestamps = assistantMessage.versionTimestamps || [
+        assistantMessage.timestamp,
+      ];
       versions.push(streamedContent);
       versionTimestamps.push(timestampValue);
 
@@ -1775,15 +1928,15 @@ export default function ChatPage() {
         prev.map((msg) =>
           msg.id === assistantMessage.id
             ? {
-              ...msg,
-              content: streamedContent,
-              versions: versions,
-              versionTimestamps: versionTimestamps,
-              currentVersionIndex: versions.length - 1,
-              timestamp: timestampValue,
-            }
-            : msg
-        )
+                ...msg,
+                content: streamedContent,
+                versions: versions,
+                versionTimestamps: versionTimestamps,
+                currentVersionIndex: versions.length - 1,
+                timestamp: timestampValue,
+              }
+            : msg,
+        ),
       );
 
       setLatency(latencyValue);
@@ -1795,7 +1948,10 @@ export default function ChatPage() {
   };
 
   // Handle version navigation
-  const handleVersionChange = (messageId: string, direction: "prev" | "next") => {
+  const handleVersionChange = (
+    messageId: string,
+    direction: "prev" | "next",
+  ) => {
     setMessages((prev) =>
       prev.map((msg) => {
         if (msg.id !== messageId || !msg.versions || msg.versions.length <= 1) {
@@ -1807,7 +1963,10 @@ export default function ChatPage() {
 
         if (direction === "prev" && currentIdx > 0) {
           newIdx = currentIdx - 1;
-        } else if (direction === "next" && currentIdx < msg.versions.length - 1) {
+        } else if (
+          direction === "next" &&
+          currentIdx < msg.versions.length - 1
+        ) {
           newIdx = currentIdx + 1;
         }
 
@@ -1821,16 +1980,63 @@ export default function ChatPage() {
         }
 
         return msg;
-      })
+      }),
     );
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
+  useEffect(() => {
+    const handleGlobalShortcuts = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+
+      // Do NOT trigger shortcuts while typing in inputs/textareas
+      if (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable
+      ) {
+        return;
+      }
+
+      // Ctrl / Cmd + K → Clear chat
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setClearChatSessionModal(true);
+        return;
+      }
+
+      // Ctrl / Cmd + M → Switch model (cycle across local + cloud)
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "m") {
+        e.preventDefault();
+
+        const allModels = [
+          ...localModels.map((m) => ({ name: m, type: "local" as const })),
+          ...cloudModels.map((m) => ({ name: m, type: "cloud" as const })),
+        ];
+
+        if (allModels.length <= 1) return;
+
+        const currentIndex = allModels.findIndex(
+          (m) => m.name === selectedModel && m.type === selectedModelType,
+        );
+
+        const nextIndex =
+          currentIndex === -1 ? 0 : (currentIndex + 1) % allModels.length;
+
+        const next = allModels[nextIndex];
+
+        setSelectedModel(next.name);
+        setSelectedModelType(next.type);
+
+        try {
+          localStorage.setItem("selected_model_name", next.name);
+          localStorage.setItem("selected_model_type", next.type);
+        } catch {}
+      }
+    };
+
+    window.addEventListener("keydown", handleGlobalShortcuts);
+    return () => window.removeEventListener("keydown", handleGlobalShortcuts);
+  }, [selectedModel, selectedModelType, localModels, cloudModels]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1861,7 +2067,7 @@ export default function ChatPage() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ session_id: sessionId }),
-        }
+        },
       );
 
       if (!response.ok) {
@@ -1947,22 +2153,27 @@ export default function ChatPage() {
 
     // Request the best possible audio quality and processing
     // These are advanced settings that improve accuracy
-    if ('serviceURI' in recognition) {
+    if ("serviceURI" in recognition) {
       // Use premium speech recognition endpoint if available
       console.log("Using premium speech recognition service");
     }
 
     // Additional settings for improved recognition
-    if ('grammars' in recognition) {
+    if ("grammars" in recognition) {
       // Grammar support (limited browser support but helps when available)
-      const SpeechGrammarList = (window as any).SpeechGrammarList || (window as any).webkitSpeechGrammarList;
+      const SpeechGrammarList =
+        (window as any).SpeechGrammarList ||
+        (window as any).webkitSpeechGrammarList;
       if (SpeechGrammarList) {
         const grammarList = new SpeechGrammarList();
         recognition.grammars = grammarList;
       }
     }
 
-    console.log("Speech recognition configured with maxAlternatives:", recognition.maxAlternatives);
+    console.log(
+      "Speech recognition configured with maxAlternatives:",
+      recognition.maxAlternatives,
+    );
 
     // Handle recognition results with real-time interim and final transcripts
     recognition.onresult = (event: any) => {
@@ -1992,13 +2203,15 @@ export default function ChatPage() {
           }
         }
 
-        console.log(`Result ${i}: "${bestTranscript}" (confidence: ${bestConfidence.toFixed(3)}, isFinal: ${result.isFinal})`);
+        console.log(
+          `Result ${i}: "${bestTranscript}" (confidence: ${bestConfidence.toFixed(3)}, isFinal: ${result.isFinal})`,
+        );
 
         if (result.isFinal) {
           // Apply cleanup only to final results
           const processedTranscript = bestTranscript
             // Fix common spacing issues
-            .replace(/\s+/g, ' ')
+            .replace(/\s+/g, " ")
             .trim();
 
           newFinalText += processedTranscript + " ";
@@ -2035,7 +2248,12 @@ export default function ChatPage() {
 
     // Handle recognition end - only stop when user manually stops
     recognition.onend = () => {
-      console.log("Recognition ended. isRecordingRef:", isRecordingRef.current, "ignoreOnEnd:", ignoreOnEndRef.current);
+      console.log(
+        "Recognition ended. isRecordingRef:",
+        isRecordingRef.current,
+        "ignoreOnEnd:",
+        ignoreOnEndRef.current,
+      );
 
       if (ignoreOnEndRef.current) {
         ignoreOnEndRef.current = false;
@@ -2086,7 +2304,9 @@ export default function ChatPage() {
           isRecordingRef.current = false;
           break;
         case "not-allowed":
-          toast.error("Microphone access denied. Please allow microphone access.");
+          toast.error(
+            "Microphone access denied. Please allow microphone access.",
+          );
           ignoreOnEndRef.current = true;
           setIsRecording(false);
           isRecordingRef.current = false;
@@ -2182,7 +2402,7 @@ export default function ChatPage() {
       if (sessionId === "1" && id !== "1") {
         // Filter out dummy session
         setChatSessions((prev) =>
-          prev.filter((chatSession) => chatSession.id !== "1")
+          prev.filter((chatSession) => chatSession.id !== "1"),
         );
         if (newChatSessionBtnRef.current && id != "1") {
           newChatSessionBtnRef.current.disabled = false;
@@ -2192,7 +2412,7 @@ export default function ChatPage() {
       setSessionId(id);
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/chat/${id}`
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/chat/${id}`,
       );
       if (!response.ok) throw new Error("Failed to fetch messages");
 
@@ -2218,16 +2438,16 @@ export default function ChatPage() {
             timestamp: new Date(msg.timestamp),
             ...(msg.uploaded_file
               ? {
-                file: {
-                  name: msg.uploaded_file.name,
-                  size: msg.uploaded_file.size,
-                  type: msg.uploaded_file.type,
-                  file: msg.uploaded_file.file,
-                } as UploadedFile,
-              }
+                  file: {
+                    name: msg.uploaded_file.name,
+                    size: msg.uploaded_file.size,
+                    type: msg.uploaded_file.type,
+                    file: msg.uploaded_file.file,
+                  } as UploadedFile,
+                }
               : {}),
           };
-        }
+        },
       );
 
       const newWelcomeMessage: Message = {
@@ -2249,7 +2469,7 @@ export default function ChatPage() {
   const handleNewChatSession = () => {
     setIsLimitReached(false);
     const isAlreadyPresent = chatSessions.some(
-      (session) => session.id === welcomeSession.id
+      (session) => session.id === welcomeSession.id,
     );
 
     if (!isAlreadyPresent) {
@@ -2258,7 +2478,7 @@ export default function ChatPage() {
     setSessionId(welcomeSession.id);
     welcomeMessage.timestamp = new Date();
     setMessages([welcomeMessage]);
-    if (!isChatSessionsCollapsed){
+    if (!isChatSessionsCollapsed) {
       setIsChatSessionsCollapsed(!isChatSessionsCollapsed);
     }
     if (newChatSessionBtnRef.current) {
@@ -2281,7 +2501,7 @@ export default function ChatPage() {
         `${process.env.NEXT_PUBLIC_BACKEND_URL}/chat/delete/${id}`,
         {
           method: "DELETE",
-        }
+        },
       );
 
       if (!response.ok) {
@@ -2295,20 +2515,20 @@ export default function ChatPage() {
 
       // Remove from local state
       const updatedSessions = chatSessions.filter(
-        (chatSession) => chatSession.id !== id
+        (chatSession) => chatSession.id !== id,
       );
       setChatSessions(updatedSessions);
 
       // Remove from localStorage
       const storedSessions: string[] = JSON.parse(
-        localStorage.getItem("chat_sessions") || "[]"
+        localStorage.getItem("chat_sessions") || "[]",
       );
       const filteredStoredSessions = storedSessions.filter(
-        (sessionId) => sessionId !== id
+        (sessionId) => sessionId !== id,
       );
       localStorage.setItem(
         "chat_sessions",
-        JSON.stringify(filteredStoredSessions)
+        JSON.stringify(filteredStoredSessions),
       );
 
       // Decide what to show next
@@ -2348,12 +2568,14 @@ export default function ChatPage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ session_id: id, new_name: editedName }),
-        }
+        },
       );
 
       if (res.ok) {
         setChatSessions((prev) =>
-          prev.map((s) => (s.id === id ? { ...s, sessionName: editedName } : s))
+          prev.map((s) =>
+            s.id === id ? { ...s, sessionName: editedName } : s,
+          ),
         );
       } else {
         const errorText = await res.text();
@@ -2408,20 +2630,24 @@ export default function ChatPage() {
   [&::-webkit-scrollbar-thumb:hover]:bg-gray-400
   dark:[&::-webkit-scrollbar-thumb]:bg-gray-600 
   dark:[&::-webkit-scrollbar-thumb:hover]:bg-gray-500
-  lg:static inset-y-0 left-0 z-50 bg-background border-r transform transition-all duration-300 ease-in-out ${isSidebarOpen
-            ? "translate-x-0 w-80 lg:w-80"
-            : "-translate-x-full lg:translate-x-0 lg:w-0 lg:border-r-0"
-          }`}
+  lg:static inset-y-0 left-0 z-50 bg-background border-r transform transition-all duration-300 ease-in-out ${
+    isSidebarOpen
+      ? "translate-x-0 w-80 lg:w-80"
+      : "-translate-x-full lg:translate-x-0 lg:w-0 lg:border-r-0"
+  }`}
       >
         {/* Sidebar Header */}
         <div
-          className={`sticky top-0 z-10 bg-background/80 backdrop-blur-xl border-b px-4 py-4 ${!isSidebarOpen ? "lg:hidden" : ""
-            }`}
+          className={`sticky top-0 z-10 bg-background/80 backdrop-blur-xl border-b px-4 py-4 ${
+            !isSidebarOpen ? "lg:hidden" : ""
+          }`}
         >
           <div className="flex items-center justify-between">
             <Link href="/">
               <Image
-                src={darkMode ? "/logos/logo-dark.svg" : "/logos/logo-light.svg"}
+                src={
+                  darkMode ? "/logos/logo-dark.svg" : "/logos/logo-light.svg"
+                }
                 alt="PrivGPT Studio Logo"
                 width={290}
                 height={53}
@@ -2578,34 +2804,6 @@ export default function ChatPage() {
               <PlusCircle className="w-4 h-4 mr-2" />
               New Chat
             </Button>
-            {token && (
-              <Button
-                variant="ghost"
-                className="w-full justify-start text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20"
-                onClick={() => {
-                  logout();
-                  router.push("/sign-in");
-                }}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="w-4 h-4 mr-2"
-                >
-                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                  <polyline points="16 17 21 12 16 7" />
-                  <line x1="21" x2="9" y1="12" y2="12" />
-                </svg>
-                Sign Out
-              </Button>
-            )}
             <Button
               variant="ghost"
               className="w-full justify-start"
@@ -2614,7 +2812,11 @@ export default function ChatPage() {
               <Settings className="w-4 h-4 mr-2" />
               Settings
             </Button>
-            <Button variant="ghost" className="w-full justify-start">
+            <Button
+              variant="ghost"
+              className="w-full justify-start"
+              onClick={handleFetchModelInfo}
+            >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="24"
@@ -2658,7 +2860,7 @@ export default function ChatPage() {
               onValueChange={(model: string) => {
                 setSelectedModel(model);
                 setSelectedModelType(
-                  localModels.includes(model) ? "local" : "cloud"
+                  localModels.includes(model) ? "local" : "cloud",
                 );
               }}
             >
@@ -2748,8 +2950,9 @@ export default function ChatPage() {
 
       {/* Main Chat Panel */}
       <div
-        className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ease-in-out ${isSidebarOpen ? "lg:ml-0" : "lg:ml-0"
-          }`}
+        className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ease-in-out ${
+          isSidebarOpen ? "lg:ml-0" : "lg:ml-0"
+        }`}
       >
         {/* Chat Header with Hamburger */}
         <div className="border-b p-4">
@@ -2763,214 +2966,250 @@ export default function ChatPage() {
               >
                 <ChevronRight className="w-5 h-5" />
               </Button>
-              <div>
+              <div className="flex justify-between">
                 <h1 className="text-xl font-semibold">Chat Interface</h1>
-                <p className="text-sm text-muted-foreground">
-                  Currently using: {selectedModel}
-                </p>
               </div>
-              <div className="relative mr-4 hidden md:block">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            </div>
+            <div className="flex justify-center w-[50%] p-4 bg-background/50">
+              <div className="relative w-full max-w-md">
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search messages..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-8 w-[200px]"
+                  className="pl-10 pr-8 w-full border-2 focus:border-primary"
                 />
+                {searchQuery && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-1 top-1 h-6 w-6 p-0 hover:bg-muted"
+                    onClick={() => setSearchQuery("")}
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
+                )}
               </div>
             </div>
-            <Badge
-              variant={selectedModelType === "cloud" ? "default" : "secondary"}
-            >
-              {selectedModelType === "cloud" ? "Cloud" : "Local"}
-            </Badge>
+            <div className="flex flex-col">
+              <p className="text-sm text-muted-foreground">
+                Currently using: {selectedModel}
+              </p>
+              <div className="mt-1">
+                <Badge
+                  variant={
+                    selectedModelType === "cloud" ? "default" : "secondary"
+                  }
+                >
+                  {selectedModelType === "cloud" ? "Cloud" : "Local"}
+                </Badge>
+              </div>
+            </div>
           </div>
         </div>
-
+        
         {/* Messages */}
         <div
-          className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 
-  [&::-webkit-scrollbar-track]:bg-transparent 
-  [&::-webkit-scrollbar-thumb]:bg-gray-300 
+          className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:w-1.5
+  [&::-webkit-scrollbar-track]:bg-transparent
+  [&::-webkit-scrollbar-thumb]:bg-gray-300
   [&::-webkit-scrollbar-thumb]:rounded-sm
   [&::-webkit-scrollbar-thumb:hover]:bg-gray-400
-  dark:[&::-webkit-scrollbar-thumb]:bg-gray-600 
+  dark:[&::-webkit-scrollbar-thumb]:bg-gray-600
   dark:[&::-webkit-scrollbar-thumb:hover]:bg-gray-500 p-4 space-y-4"
         >
           {messages
             .filter((message) =>
-              message.content.toLowerCase().includes(searchQuery.toLowerCase())
+              message.content.toLowerCase().includes(searchQuery.toLowerCase()),
             )
             .map((message) => (
-            <div
-              key={message.id}
-              className={`flex ${message.role === "user" ? "justify-end" : "justify-start"
-                }`}
-            >
               <div
-                className={`flex items-start space-x-2 max-w-2xl ${message.role === "user"
-                  ? "flex-row-reverse space-x-reverse"
-                  : ""
-                  }`}
+                key={message.id}
+                className={`flex ${
+                  message.role === "user" ? "justify-end" : "justify-start"
+                }`}
               >
-                <Avatar className="w-8 h-8">
-                  <AvatarFallback>
-                    {message.role === "user" ? "U" : "AI"}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex flex-col items-start">
-                  <div
-                    className={`rounded-lg px-4 py-2 ${message.role === "user"
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted"
+                <div
+                  className={`flex items-start space-x-2 max-w-2xl ${
+                    message.role === "user"
+                      ? "flex-row-reverse space-x-reverse"
+                      : ""
+                  }`}
+                >
+                  <Avatar className="w-8 h-8">
+                    <AvatarFallback>
+                      {message.role === "user" ? "U" : "AI"}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col items-start">
+                    <div
+                      className={`rounded-lg px-4 py-2 ${
+                        message.role === "user"
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted"
                       }`}
-                  >
-                    {message.file && (
-                      <div className="mt-2 flex items-center space-x-2 bg-muted/50 rounded-lg p-2 max-w-xs mb-3">
-                        {getFileIcon(message.file.type)}
-                        <div>
-                          <p className="text-sm font-medium max-w-[100px] truncate">
-                            {message.file.name}
-                          </p>
-                          <p className="text-[0.6em]">
-                            {formatFileSize(message.file.size)}
-                          </p>
+                    >
+                      {message.file && (
+                        <div className="mt-2 flex items-center space-x-2 bg-muted/50 rounded-lg p-2 max-w-xs mb-3">
+                          {getFileIcon(message.file.type)}
+                          <div>
+                            <p className="text-sm font-medium max-w-[100px] truncate">
+                              {message.file.name}
+                            </p>
+                            <p className="text-[0.6em]">
+                              {formatFileSize(message.file.size)}
+                            </p>
+                          </div>
                         </div>
+                      )}
+                      <div>
+                        <MessageContent
+                          content={message.content}
+                          isLoading={message.content === "..."}
+                          isUser={message.role === "user"}
+                          isSpeakingThis={speakingMessageId === message.id}
+                          currentCharIndex={currentCharIndex}
+                          spokenText={spokenText}
+                          searchQuery={searchQuery}
+                        />
                       </div>
-                    )}
-                    <div>
-                      <MessageContent
-                        content={message.content}
-                        isLoading={message.content === "..."}
-                        isUser={message.role === "user"}
-                        isSpeakingThis={speakingMessageId === message.id}
-                        currentCharIndex={currentCharIndex}
-                        spokenText={spokenText}
-                      />
+                      <p
+                        suppressHydrationWarning
+                        className="text-xs opacity-70 mt-1"
+                      >
+                        {message.timestamp.toLocaleTimeString()}
+                      </p>
                     </div>
-                    <p
-                      suppressHydrationWarning
-                      className="text-xs opacity-70 mt-1"
-                    >
-                      {message.timestamp.toLocaleTimeString()}
-                    </p>
-                  </div>
-                  {/* Controls under the message bubble (bottom-left) */}
-                  <div className="mt-1 flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      title="Copy message"
-                      aria-label="Copy message"
-                      disabled={!message.content || message.content === "..."}
-                      onClick={() => {
-                        navigator.clipboard
-                          .writeText(message.content)
-                          .then(() => toast.success("Message copied"))
-                          .catch(() => toast.error("Copy failed"));
-                      }}
-                    >
-                      <Copy className="w-4 h-4" />
-                    </Button>
-                    {message.role === "assistant" && (
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          title={
-                            speakingMessageId === message.id
-                              ? "Stop reading"
-                              : "Read aloud"
-                          }
-                          aria-label={
-                            speakingMessageId === message.id
-                              ? "Stop reading"
-                              : "Read aloud"
-                          }
-                          disabled={!speechSupported || message.content === "..."}
-                          onClick={() => handleSpeakClick(message)}
-                          className={
-                            speakingMessageId === message.id
-                              ? "bg-red-500 text-white hover:bg-red-600"
-                              : ""
-                          }
-                        >
-                          {speakingMessageId === message.id ? (
-                            <Square className="w-4 h-4" />
-                          ) : (
-                            <Volume2 className="w-4 h-4" />
-                          )}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          title="Retry answer"
-                          aria-label="Retry answer"
-                          disabled={message.content === "..."}
-                          onClick={() => handleRetry(message)}
-                        >
-                          <RefreshCw className="w-4 h-4" />
-                        </Button>
-                        {/* Regenerate with different model */}
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              title="Regenerate with different model"
-                              aria-label="Regenerate with different model"
-                              disabled={message.content === "..."}
-                            >
-                              <svg
-                                className="w-4 h-4"
-                                viewBox="0 0 20 20"
-                                fill="currentColor"
+                    {/* Controls under the message bubble (bottom-left) */}
+                    <div className="mt-1 flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        title="Copy message"
+                        aria-label="Copy message"
+                        disabled={!message.content || message.content === "..."}
+                        onClick={() => {
+                          navigator.clipboard
+                            .writeText(message.content)
+                            .then(() => toast.success("Message copied"))
+                            .catch(() => toast.error("Copy failed"));
+                        }}
+                      >
+                        <Copy className="w-4 h-4" />
+                      </Button>
+                      {message.role === "assistant" && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title={
+                              speakingMessageId === message.id
+                                ? "Stop reading"
+                                : "Read aloud"
+                            }
+                            aria-label={
+                              speakingMessageId === message.id
+                                ? "Stop reading"
+                                : "Read aloud"
+                            }
+                            disabled={
+                              !speechSupported || message.content === "..."
+                            }
+                            onClick={() => handleSpeakClick(message)}
+                            className={
+                              speakingMessageId === message.id
+                                ? "bg-red-500 text-white hover:bg-red-600"
+                                : ""
+                            }
+                          >
+                            {speakingMessageId === message.id ? (
+                              <Square className="w-4 h-4" />
+                            ) : (
+                              <Volume2 className="w-4 h-4" />
+                            )}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Retry answer"
+                            aria-label="Retry answer"
+                            disabled={message.content === "..."}
+                            onClick={() => handleRetry(message)}
+                          >
+                            <RefreshCw className="w-4 h-4" />
+                          </Button>
+                          {/* Regenerate with different model */}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                title="Regenerate with different model"
+                                aria-label="Regenerate with different model"
+                                disabled={message.content === "..."}
                               >
-                                <path d="M15.4707 17.137C15.211 17.3967 14.789 17.3967 14.5293 17.137C14.2699 16.8774 14.27 16.4563 14.5293 16.1966L15.4707 17.137ZM14.5293 11.1966C14.7567 10.9693 15.1081 10.9409 15.3662 11.1117L15.4707 11.1966L17.9707 13.6966C18.23 13.9563 18.2301 14.3774 17.9707 14.637L15.4707 17.137L15 16.6663L14.5293 16.1966L15.8945 14.8314H14.5869C14.2748 14.8288 14.0174 14.818 13.7744 14.7747L13.6299 14.7445C13.3878 14.6863 13.1539 14.5994 12.9326 14.4867L12.7148 14.3656C12.3799 14.1603 12.1014 13.8751 11.6914 13.4652L11.1963 12.9701L11.667 12.5003L12.1367 12.0296L12.6318 12.5247C13.0865 12.9794 13.2406 13.1269 13.4102 13.2308L13.5361 13.3021C13.6644 13.3674 13.8002 13.4168 13.9404 13.4505L14.0957 13.4788C14.2674 13.4996 14.508 13.5013 14.9902 13.5013H15.8936L14.5293 12.137L14.4443 12.0326C14.2741 11.7746 14.3024 11.4238 14.5293 11.1966ZM14.5293 2.86263C14.7566 2.63536 15.1081 2.60716 15.3662 2.77767L15.4707 2.86263L17.9707 5.36263L18.0557 5.46712C18.2018 5.68842 18.2018 5.97825 18.0557 6.19954L17.9707 6.30404L15.4707 8.80404C15.211 9.06373 14.789 9.06373 14.5293 8.80404C14.2696 8.54434 14.2696 8.12233 14.5293 7.86263L15.8936 6.49837H14.9902C14.5079 6.49837 14.2674 6.50102 14.0957 6.52181L13.9404 6.54915C13.8001 6.58286 13.6645 6.63319 13.5361 6.69857L13.4102 6.76888C13.3253 6.82085 13.2445 6.88373 13.1279 6.99056L12.6318 7.47493L5.80859 14.2982C5.44991 14.6569 5.19151 14.9199 4.9082 15.1175L4.78516 15.1986C4.57277 15.3287 4.34572 15.4333 4.10938 15.5101L3.87012 15.5775C3.58342 15.6463 3.28545 15.6613 2.90723 15.6644L2.5 15.6654L2.36621 15.6517C2.06315 15.5898 1.83512 15.3216 1.83496 15.0003C1.83496 14.6331 2.13273 14.3353 2.5 14.3353L3.20117 14.3275C3.36059 14.3206 3.46295 14.3077 3.55957 14.2845L3.69824 14.2454C3.83527 14.2009 3.96671 14.1402 4.08984 14.0648L4.21875 13.974C4.35485 13.8673 4.52707 13.6988 4.86816 13.3577L11.6914 6.5345L11.9775 6.25032C12.2445 5.98777 12.4637 5.78904 12.7148 5.63509L12.9326 5.51302C13.1539 5.40035 13.3879 5.31429 13.6299 5.25618L13.7744 5.22591C14.1145 5.16528 14.4829 5.16829 14.9902 5.16829H15.8936L14.5293 3.80404L14.4443 3.69954C14.2738 3.44141 14.302 3.0899 14.5293 2.86263ZM11.1963 12.0296C11.4559 11.77 11.877 11.7701 12.1367 12.0296L11.1963 12.9701C10.9368 12.7103 10.9366 12.2893 11.1963 12.0296ZM2.90723 4.33529C3.28545 4.33837 3.58342 4.35337 3.87012 4.4222L4.10938 4.48958C4.34575 4.56639 4.57274 4.67094 4.78516 4.80111L4.9082 4.88216C5.19157 5.07978 5.44984 5.34275 5.80859 5.7015L7.13672 7.02962L7.22168 7.13411C7.39224 7.39225 7.36401 7.74276 7.13672 7.97005C6.90943 8.19734 6.55892 8.22557 6.30078 8.05501L6.19629 7.97005L4.86816 6.64193C4.52694 6.3007 4.35488 6.13241 4.21875 6.02572L4.08984 5.93587C3.96673 5.86043 3.83525 5.79974 3.69824 5.75521L3.55957 5.71615C3.46296 5.69295 3.36058 5.68005 3.20117 5.67318L2.5 5.66536L2.36621 5.65169C2.06315 5.58981 1.83511 5.32163 1.83496 5.00032C1.83496 4.63306 2.13273 4.33529 2.5 4.33529H2.90723Z" />
-                              </svg>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="start" className="w-56">
-                            {localModels.length > 0 && (
-                              <>
-                                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
-                                  Local Models
-                                </div>
-                                {localModels.map((model) => (
-                                  <DropdownMenuItem
-                                    key={`local-${model}`}
-                                    onClick={() => handleRetryWithModel(message, model, "local")}
-                                  >
-                                    {model}
-                                  </DropdownMenuItem>
-                                ))}
-                              </>
-                            )}
-                            {cloudModels.length > 0 && (
-                              <>
-                                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
-                                  Cloud Models
-                                </div>
-                                {cloudModels.map((model) => (
-                                  <DropdownMenuItem
-                                    key={`cloud-${model}`}
-                                    onClick={() => handleRetryWithModel(message, model, "cloud")}
-                                  >
-                                    {model}
-                                  </DropdownMenuItem>
-                                ))}
-                              </>
-                            )}
-                            {localModels.length === 0 && cloudModels.length === 0 && (
-                              <div className="px-2 py-1.5 text-xs text-muted-foreground">
-                                No models available
-                              </div>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                        {/* Version navigation for assistant messages with multiple versions */}
-                        {message.versions &&
-                          message.versions.length > 1 && (
+                                <svg
+                                  className="w-4 h-4"
+                                  viewBox="0 0 20 20"
+                                  fill="currentColor"
+                                >
+                                  <path d="M15.4707 17.137C15.211 17.3967 14.789 17.3967 14.5293 17.137C14.2699 16.8774 14.27 16.4563 14.5293 16.1966L15.4707 17.137ZM14.5293 11.1966C14.7567 10.9693 15.1081 10.9409 15.3662 11.1117L15.4707 11.1966L17.9707 13.6966C18.23 13.9563 18.2301 14.3774 17.9707 14.637L15.4707 17.137L15 16.6663L14.5293 16.1966L15.8945 14.8314H14.5869C14.2748 14.8288 14.0174 14.818 13.7744 14.7747L13.6299 14.7445C13.3878 14.6863 13.1539 14.5994 12.9326 14.4867L12.7148 14.3656C12.3799 14.1603 12.1014 13.8751 11.6914 13.4652L11.1963 12.9701L11.667 12.5003L12.1367 12.0296L12.6318 12.5247C13.0865 12.9794 13.2406 13.1269 13.4102 13.2308L13.5361 13.3021C13.6644 13.3674 13.8002 13.4168 13.9404 13.4505L14.0957 13.4788C14.2674 13.4996 14.508 13.5013 14.9902 13.5013H15.8936L14.5293 12.137L14.4443 12.0326C14.2741 11.7746 14.3024 11.4238 14.5293 11.1966ZM14.5293 2.86263C14.7566 2.63536 15.1081 2.60716 15.3662 2.77767L15.4707 2.86263L17.9707 5.36263L18.0557 5.46712C18.2018 5.68842 18.2018 5.97825 18.0557 6.19954L17.9707 6.30404L15.4707 8.80404C15.211 9.06373 14.789 9.06373 14.5293 8.80404C14.2696 8.54434 14.2696 8.12233 14.5293 7.86263L15.8936 6.49837H14.9902C14.5079 6.49837 14.2674 6.50102 14.0957 6.52181L13.9404 6.54915C13.8001 6.58286 13.6645 6.63319 13.5361 6.69857L13.4102 6.76888C13.3253 6.82085 13.2445 6.88373 13.1279 6.99056L12.6318 7.47493L5.80859 14.2982C5.44991 14.6569 5.19151 14.9199 4.9082 15.1175L4.78516 15.1986C4.57277 15.3287 4.34572 15.4333 4.10938 15.5101L3.87012 15.5775C3.58342 15.6463 3.28545 15.6613 2.90723 15.6644L2.5 15.6654L2.36621 15.6517C2.06315 15.5898 1.83512 15.3216 1.83496 15.0003C1.83496 14.6331 2.13273 14.3353 2.5 14.3353L3.20117 14.3275C3.36059 14.3206 3.46295 14.3077 3.55957 14.2845L3.69824 14.2454C3.83527 14.2009 3.96671 14.1402 4.08984 14.0648L4.21875 13.974C4.35485 13.8673 4.52707 13.6988 4.86816 13.3577L11.6914 6.5345L11.9775 6.25032C12.2445 5.98777 12.4637 5.78904 12.7148 5.63509L12.9326 5.51302C13.1539 5.40035 13.3879 5.31429 13.6299 5.25618L13.7744 5.22591C14.1145 5.16528 14.4829 5.16829 14.9902 5.16829H15.8936L14.5293 3.80404L14.4443 3.69954C14.2738 3.44141 14.302 3.0899 14.5293 2.86263ZM11.1963 12.0296C11.4559 11.77 11.877 11.7701 12.1367 12.0296L11.1963 12.9701C10.9368 12.7103 10.9366 12.2893 11.1963 12.0296ZM2.90723 4.33529C3.28545 4.33837 3.58342 4.35337 3.87012 4.4222L4.10938 4.48958C4.34575 4.56639 4.57274 4.67094 4.78516 4.80111L4.9082 4.88216C5.19157 5.07978 5.44984 5.34275 5.80859 5.7015L7.13672 7.02962L7.22168 7.13411C7.39224 7.39225 7.36401 7.74276 7.13672 7.97005C6.90943 8.19734 6.55892 8.22557 6.30078 8.05501L6.19629 7.97005L4.86816 6.64193C4.52694 6.3007 4.35488 6.13241 4.21875 6.02572L4.08984 5.93587C3.96673 5.86043 3.83525 5.79974 3.69824 5.75521L3.55957 5.71615C3.46296 5.69295 3.36058 5.68005 3.20117 5.67318L2.5 5.66536L2.36621 5.65169C2.06315 5.58981 1.83511 5.32163 1.83496 5.00032C1.83496 4.63306 2.13273 4.33529 2.5 4.33529H2.90723Z" />
+                                </svg>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" className="w-56">
+                              {localModels.length > 0 && (
+                                <>
+                                  <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                                    Local Models
+                                  </div>
+                                  {localModels.map((model) => (
+                                    <DropdownMenuItem
+                                      key={`local-${model}`}
+                                      onClick={() =>
+                                        handleRetryWithModel(
+                                          message,
+                                          model,
+                                          "local",
+                                        )
+                                      }
+                                    >
+                                      {model}
+                                    </DropdownMenuItem>
+                                  ))}
+                                </>
+                              )}
+                              {cloudModels.length > 0 && (
+                                <>
+                                  <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                                    Cloud Models
+                                  </div>
+                                  {cloudModels.map((model) => (
+                                    <DropdownMenuItem
+                                      key={`cloud-${model}`}
+                                      onClick={() =>
+                                        handleRetryWithModel(
+                                          message,
+                                          model,
+                                          "cloud",
+                                        )
+                                      }
+                                    >
+                                      {model}
+                                    </DropdownMenuItem>
+                                  ))}
+                                </>
+                              )}
+                              {localModels.length === 0 &&
+                                cloudModels.length === 0 && (
+                                  <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                                    No models available
+                                  </div>
+                                )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                          {/* Version navigation for assistant messages with multiple versions */}
+                          {message.versions && message.versions.length > 1 && (
                             <div className="flex items-center gap-1 ml-2 text-xs opacity-70">
                               <Button
                                 variant="ghost"
@@ -2978,13 +3217,18 @@ export default function ChatPage() {
                                 className="h-6 w-6"
                                 title="Previous version"
                                 aria-label="Previous version"
-                                disabled={(message.currentVersionIndex ?? 0) === 0}
-                                onClick={() => handleVersionChange(message.id, "prev")}
+                                disabled={
+                                  (message.currentVersionIndex ?? 0) === 0
+                                }
+                                onClick={() =>
+                                  handleVersionChange(message.id, "prev")
+                                }
                               >
                                 <ChevronLeft className="w-3 h-3" />
                               </Button>
                               <span className="min-w-[40px] text-center">
-                                {(message.currentVersionIndex ?? 0) + 1}/{message.versions.length}
+                                {(message.currentVersionIndex ?? 0) + 1}/
+                                {message.versions.length}
                               </span>
                               <Button
                                 variant="ghost"
@@ -2993,21 +3237,24 @@ export default function ChatPage() {
                                 title="Next version"
                                 aria-label="Next version"
                                 disabled={
-                                  (message.currentVersionIndex ?? 0) === message.versions.length - 1
+                                  (message.currentVersionIndex ?? 0) ===
+                                  message.versions.length - 1
                                 }
-                                onClick={() => handleVersionChange(message.id, "next")}
+                                onClick={() =>
+                                  handleVersionChange(message.id, "next")
+                                }
                               >
                                 <ChevronRight className="w-3 h-3" />
                               </Button>
                             </div>
                           )}
-                      </>
-                    )}
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
 
           {isTyping && (
             <div className="flex justify-start">
@@ -3039,18 +3286,20 @@ export default function ChatPage() {
           {/* [NEW] Limit Reached Warning */}
           {isLimitReached && (
             <div className="mb-4 p-3 bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-md flex items-center justify-between">
-               <div className="flex items-center text-red-600 dark:text-red-400 text-sm">
-                  <Info className="w-4 h-4 mr-2" />
-                  <span>You have reached the message limit for this session.</span>
-               </div>
-               <Button 
-                 variant="outline" 
-                 size="sm" 
-                 className="h-7 text-xs"
-                 onClick={handleNewChatSession}
-               >
-                 Start New Chat
-               </Button>
+              <div className="flex items-center text-red-600 dark:text-red-400 text-sm">
+                <Info className="w-4 h-4 mr-2" />
+                <span>
+                  You have reached the message limit for this session.
+                </span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={handleNewChatSession}
+              >
+                Start New Chat
+              </Button>
             </div>
           )}
           {/* File Preview */}
@@ -3077,13 +3326,16 @@ export default function ChatPage() {
               variant="ghost"
               size="sm"
               onClick={handleVoiceInput}
-              className={`${isRecording
-                ? "text-red-500 animate-pulse bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-900/40"
-                : "hover:text-primary"
-                } transition-all duration-200`}
+              className={`${
+                isRecording
+                  ? "text-red-500 animate-pulse bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-900/40"
+                  : "hover:text-primary"
+              } transition-all duration-200`}
               title={isRecording ? "Stop recording" : "Start voice input"}
             >
-              <Mic className={`w-4 h-4 ${isRecording ? "animate-pulse" : ""}`} />
+              <Mic
+                className={`w-4 h-4 ${isRecording ? "animate-pulse" : ""}`}
+              />
               {isRecording && (
                 <span className="ml-1 text-xs font-medium">Listening...</span>
               )}
@@ -3114,7 +3366,9 @@ export default function ChatPage() {
                 <div className="absolute inset-0 p-2 px-3 pointer-events-none overflow-auto z-10 flex items-start">
                   <div className="text-sm leading-relaxed whitespace-pre-wrap break-words w-full pt-[2px]">
                     <span className="text-foreground">{finalTranscript}</span>
-                    <span className="text-muted-foreground italic">{interimTranscript}</span>
+                    <span className="text-muted-foreground italic">
+                      {interimTranscript}
+                    </span>
                   </div>
                 </div>
               )}
@@ -3124,7 +3378,17 @@ export default function ChatPage() {
                   value={input}
                   disabled={isLimitReached}
                   onChange={(_event, newValue) => setInput(newValue)}
-                  placeholder={isLimitReached ? "Session limit reached. Please start a new chat." :"Type your message and use @ to mention chats..."}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSend();
+                    }
+                  }}
+                  placeholder={
+                    isLimitReached
+                      ? "Session limit reached. Please start a new chat."
+                      : "Type your message and use @ to mention chats..."
+                  }
                   style={{
                     control: {
                       backgroundColor: "transparent",
@@ -3156,7 +3420,6 @@ export default function ChatPage() {
                     },
                   }}
                   className="flex min-h-[80px] w-full rounded-md border border-input bg-background text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:border-input disabled:cursor-not-allowed disabled:opacity-50"
-                  onKeyDown={handleKeyPress}
                 >
                   <Mention
                     trigger="@"
@@ -3174,10 +3437,20 @@ export default function ChatPage() {
                   value={input}
                   disabled={isLimitReached}
                   onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={handleKeyPress}
-                  placeholder={isLimitReached ? "Session limit reached. Please start a new chat." :"Type your message in markdown..."}
-                  className={`flex-1 resize-none min-h-[80px] ${isRecording ? "text-transparent caret-foreground" : ""
-                    }`}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSend();
+                    }
+                  }}
+                  placeholder={
+                    isLimitReached
+                      ? "Session limit reached. Please start a new chat."
+                      : "Type your message in markdown..."
+                  }
+                  className={`flex-1 resize-none min-h-[80px] ${
+                    isRecording ? "text-transparent caret-foreground" : ""
+                  }`}
                 />
               )}
             </div>
@@ -3192,7 +3465,11 @@ export default function ChatPage() {
             ) : (
               <Button
                 onClick={handleSend}
-                disabled={isTyping || (!uploadedFile && input.trim() === "") || isLimitReached}
+                disabled={
+                  isTyping ||
+                  (!uploadedFile && input.trim() === "") ||
+                  isLimitReached
+                }
               >
                 <Send className="w-4 h-4" />
               </Button>
@@ -3310,6 +3587,112 @@ export default function ChatPage() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={modelInfoModal} onOpenChange={setModelInfoModal}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Cpu className="w-5 h-5" />
+              Model Information:{" "}
+              <span className="text-primary">{selectedModel}</span>
+            </DialogTitle>
+            <DialogDescription>
+              Technical specifications and configuration for the currently
+              selected model.
+            </DialogDescription>
+          </DialogHeader>
+
+          {isFetchingModelDetails ? (
+            <div className="flex flex-col items-center justify-center py-12 space-y-4">
+              <RefreshCw className="w-8 h-8 animate-spin text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">
+                Fetching model metadata...
+              </p>
+            </div>
+          ) : modelDetails ? (
+            <div className="flex-1 overflow-y-auto min-h-0 pr-2">
+              <div className="grid gap-6 py-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-muted/50 p-3 rounded-lg border">
+                    <p className="text-xs text-muted-foreground uppercase font-bold">
+                      Family
+                    </p>
+                    <p
+                      className="font-mono text-sm truncate"
+                      title={modelDetails.details?.family || "N/A"}
+                    >
+                      {modelDetails.details?.family || "Unknown"}
+                    </p>
+                  </div>
+                  <div className="bg-muted/50 p-3 rounded-lg border">
+                    <p className="text-xs text-muted-foreground uppercase font-bold">
+                      Param Size
+                    </p>
+                    <p className="font-mono text-sm">
+                      {modelDetails.details?.parameter_size || "Unknown"}
+                    </p>
+                  </div>
+                  <div className="bg-muted/50 p-3 rounded-lg border">
+                    <p className="text-xs text-muted-foreground uppercase font-bold">
+                      Quantization
+                    </p>
+                    <p className="font-mono text-sm">
+                      {modelDetails.details?.quantization_level || "Unknown"}
+                    </p>
+                  </div>
+                  <div className="bg-muted/50 p-3 rounded-lg border">
+                    <p className="text-xs text-muted-foreground uppercase font-bold">
+                      Format
+                    </p>
+                    <p className="font-mono text-sm">
+                      {modelDetails.details?.format || "Unknown"}
+                    </p>
+                  </div>
+                </div>
+
+                {modelDetails.template && (
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-semibold flex items-center">
+                      <FileText className="w-4 h-4 mr-2" /> Chat Template
+                    </h3>
+                    <div className="bg-slate-950 text-slate-50 p-4 rounded-md text-xs font-mono whitespace-pre-wrap overflow-auto max-h-[300px] border border-slate-800">
+                      {modelDetails.template}
+                    </div>
+                  </div>
+                )}
+
+                {modelDetails.parameters && (
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-semibold flex items-center">
+                      <Settings className="w-4 h-4 mr-2" /> Default Parameters
+                    </h3>
+                    <div className="bg-muted p-4 rounded-md text-xs font-mono whitespace-pre-wrap border overflow-auto max-h-[300px]">
+                      {modelDetails.parameters}
+                    </div>
+                  </div>
+                )}
+
+                {modelDetails.modelfile && (
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-semibold">Modelfile Snippet</h3>
+                    <div className="bg-muted p-3 rounded-md text-xs font-mono text-muted-foreground whitespace-pre-wrap overflow-auto max-h-[300px]">
+                      {modelDetails.modelfile}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="py-8 text-center text-muted-foreground">
+              <p>No details available for this model.</p>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button onClick={() => setModelInfoModal(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Settings Modal */}
       <Dialog open={configureModelModal} onOpenChange={setConfigureModelModal}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
@@ -3332,8 +3715,8 @@ export default function ChatPage() {
                   onChange={(e) => setSystemPrompt(e.target.value)}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Optional system instructions that define the model&apos;s behavior and role.
-                  Works with both Ollama and Gemini models.
+                  Optional system instructions that define the model&apos;s
+                  behavior and role. Works with both Ollama and Gemini models.
                 </p>
               </div>
             </div>
@@ -3344,10 +3727,13 @@ export default function ChatPage() {
             {/* Inference Parameters Section */}
             <div className="space-y-4">
               <div>
-                <h3 className="text-lg font-semibold">Edit Inference Parameters</h3>
+                <h3 className="text-lg font-semibold">
+                  Edit Inference Parameters
+                </h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Adjust inference-time parameters to control the model&apos;s behavior.
-                  Note: Frequency and Presence Penalty only work with Ollama models.
+                  Adjust inference-time parameters to control the model&apos;s
+                  behavior. Note: Frequency and Presence Penalty only work with
+                  Ollama models.
                 </p>
               </div>
 
@@ -3374,7 +3760,8 @@ export default function ChatPage() {
                     className="max-w-[200px]"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Random seed for reproducible outputs. Set this + temperature=0 for identical responses. (Ollama only)
+                    Random seed for reproducible outputs. Set this +
+                    temperature=0 for identical responses. (Ollama only)
                   </p>
                 </div>
 
@@ -3400,7 +3787,8 @@ export default function ChatPage() {
                     className="cursor-pointer"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Controls randomness. Higher values = more creative output. (0.0 - 2.0)
+                    Controls randomness. Higher values = more creative output.
+                    (0.0 - 2.0)
                   </p>
                 </div>
 
@@ -3408,7 +3796,9 @@ export default function ChatPage() {
                 <div className="grid gap-2">
                   <div className="flex items-center justify-between">
                     <Label htmlFor="topP">Top P</Label>
-                    <span className="text-sm text-muted-foreground">{topP}</span>
+                    <span className="text-sm text-muted-foreground">
+                      {topP}
+                    </span>
                   </div>
                   <Input
                     id="topP"
@@ -3424,7 +3814,8 @@ export default function ChatPage() {
                     className="cursor-pointer"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Nucleus sampling. Considers tokens until cumulative probability reaches this value. (0.0 - 1.0)
+                    Nucleus sampling. Considers tokens until cumulative
+                    probability reaches this value. (0.0 - 1.0)
                   </p>
                 </div>
 
@@ -3432,7 +3823,9 @@ export default function ChatPage() {
                 <div className="grid gap-2">
                   <div className="flex items-center justify-between">
                     <Label htmlFor="topK">Top K</Label>
-                    <span className="text-sm text-muted-foreground">{topK}</span>
+                    <span className="text-sm text-muted-foreground">
+                      {topK}
+                    </span>
                   </div>
                   <Input
                     id="topK"
@@ -3472,7 +3865,8 @@ export default function ChatPage() {
                     className="max-w-[120px]"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Maximum number of tokens to generate. ~4 chars per token. (1 - 32768)
+                    Maximum number of tokens to generate. ~4 chars per token. (1
+                    - 32768)
                   </p>
                 </div>
 
@@ -3498,7 +3892,8 @@ export default function ChatPage() {
                     className="cursor-pointer"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Reduces repetition of frequent tokens. Higher = less repetitive. (0.0 - 2.0, Ollama only)
+                    Reduces repetition of frequent tokens. Higher = less
+                    repetitive. (0.0 - 2.0, Ollama only)
                   </p>
                 </div>
 
@@ -3524,7 +3919,8 @@ export default function ChatPage() {
                     className="cursor-pointer"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Encourages new topics by penalizing repeated tokens. (0.0 - 2.0, Ollama only)
+                    Encourages new topics by penalizing repeated tokens. (0.0 -
+                    2.0, Ollama only)
                   </p>
                 </div>
 
@@ -3539,8 +3935,8 @@ export default function ChatPage() {
                     onChange={(e) => setStopSequence(e.target.value)}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Sequence where the model will stop generating further tokens.
-                    Leave empty for none.
+                    Sequence where the model will stop generating further
+                    tokens. Leave empty for none.
                   </p>
                 </div>
               </div>
@@ -3566,10 +3962,12 @@ export default function ChatPage() {
             >
               Reset to Defaults
             </Button>
-            <Button onClick={() => {
-              setConfigureModelModal(false);
-              toast.success("Model parameters updated");
-            }}>
+            <Button
+              onClick={() => {
+                setConfigureModelModal(false);
+                toast.success("Model parameters updated");
+              }}
+            >
               Save Changes
             </Button>
           </DialogFooter>
