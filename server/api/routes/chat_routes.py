@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify, Response, current_app
 import requests
 from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
-from api import gemini_model, mongo
+from api import gemini_model, mongo, plugin_manager
 from bson import ObjectId
 from api.utils.file_utils import allowed_file, extract_text_from_pdf_bytes
 import json
@@ -139,6 +139,11 @@ def chat():
         model_name = request.form.get("model_name", "")
         session_id = request.form.get("session_id", "1")
         session_name = request.form.get("session_name", "")
+        
+        # Plugin: before_prompt
+        if plugin_manager:
+            user_msg = plugin_manager.before_prompt(user_msg)
+            
         user_timestamp = datetime.now() - timedelta(seconds=10)
         session_id = request.form.get("session_id", "1")
 
@@ -252,6 +257,10 @@ def chat():
                 response = requests.post("http://localhost:11434/api/generate", json=payload, timeout=60)
                 latency_ms = int((datetime.now() - latency_ms).total_seconds() * 1000)
                 bot_reply = response.json().get("response", "No reply.")
+                
+                # Plugin: after_response
+                if plugin_manager:
+                    bot_reply = plugin_manager.after_response(bot_reply)
             except Exception as e:
                 # Fallback to gemini if available & requested
                 try:
@@ -291,6 +300,10 @@ def chat():
                         response = gemini_model.generate_content(combined_input, generation_config=generation_config)
                     latency_ms = int((datetime.now() - latency_ms).total_seconds() * 1000)
                     bot_reply = response.text or "No Reply"
+                    
+                    # Plugin: after_response
+                    if plugin_manager:
+                        bot_reply = plugin_manager.after_response(bot_reply)
             except Exception as e:
                 bot_reply = f"Cloud model error: {str(e)}"
 
@@ -315,6 +328,10 @@ def chat():
             }
             inserted = mongo.db.sessions.insert_one(session_doc)
             session_id = str(inserted.inserted_id)
+            
+            # Plugin: on_session_start
+            if plugin_manager:
+                plugin_manager.on_session_start()
             
             # Add to user's chat list if logged in
             if user_id:
@@ -351,6 +368,11 @@ def chat_stream():
         model_name = request.form.get("model_name", "")
         session_id = request.form.get("session_id", "1")
         session_name = request.form.get("session_name", "")
+
+        # Plugin: before_prompt
+        if plugin_manager:
+            user_msg = plugin_manager.before_prompt(user_msg)
+            
         if has_reached_message_limit(session_id):
             def error_generator():
                 err_msg = "Session limit reached. Please start a new chat."
@@ -581,12 +603,22 @@ def chat_stream():
                     inserted = mongo.db.sessions.insert_one(session_doc)
                     final_session_id = str(inserted.inserted_id)
 
+                    # Plugin: on_session_start
+                    if plugin_manager:
+                        plugin_manager.on_session_start()
+
                     # Add to user's chat list
                     if user_id:
                         mongo.db.users.update_one(
                             {"_id": ObjectId(user_id)},
                             {"$push": {"chat_sessions": final_session_id}}
                         )
+                
+                # Plugin: after_response (for streaming, we process at the end)
+                if plugin_manager:
+                    bot_reply = plugin_manager.after_response(bot_reply)
+                    # Note: Original chunks were already sent, so this modification 
+                    # only affects what is SAVED to the database history.
                 
                 # Send completion message
                 yield f"data: {json.dumps({'type': 'complete', 'session_id': final_session_id, 'timestamp': end_time.isoformat(), 'latency': latency_ms})}\n\n"
@@ -768,6 +800,10 @@ def delete_chat(session_id):
 
         if result.deleted_count == 0:
             return jsonify({"error": "Chat session not found"}), 404
+
+        # Plugin: on_session_end
+        if plugin_manager:
+            plugin_manager.on_session_end()
 
         # Remove from any user's chat list
         mongo.db.users.update_many(

@@ -5,9 +5,12 @@ from flask_bcrypt import Bcrypt
 from .config import Config
 import google.generativeai as genai
 
+from api.plugins.manager import init_plugin_manager
+
 mongo = PyMongo()
 bcrypt = Bcrypt()
 gemini_model = None
+plugin_manager = None
 
 
 def create_app():
@@ -16,6 +19,10 @@ def create_app():
     app.config.from_object(Config)
     mongo.init_app(app)
     bcrypt.init_app(app)
+    
+    # Initialize Plugins
+    global plugin_manager
+    plugin_manager = init_plugin_manager(app.config['PLUGINS_DIR'], app.config['ENABLED_PLUGINS'])
 
     @app.route("/")
     def index():
