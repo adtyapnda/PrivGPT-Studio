@@ -22,7 +22,7 @@ def create_app():
     
     # Initialize Plugins
     global plugin_manager
-    plugin_manager = init_plugin_manager(app.config['PLUGINS_DIR'], app.config['ENABLED_PLUGINS'])
+    plugin_manager = init_plugin_manager(app.config['PLUGINS_DIRS'], app.config['ENABLED_PLUGINS'])
 
     @app.route("/")
     def index():

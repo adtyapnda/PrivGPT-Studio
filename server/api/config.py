@@ -10,13 +10,18 @@ class Config:
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "your_gemini_api_key")
     SECRET_KEY = os.getenv("SECRET_KEY", "dev_secret_key")
     # Plugins directory logic
-    # Try project root first, then fallback to a plugins folder within the server directory
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) # this is the 'server' folder
     PROJECT_ROOT = os.path.dirname(BASE_DIR)
     
-    _default_plugins_dir = os.path.join(PROJECT_ROOT, "plugins")
-    if not os.path.exists(_default_plugins_dir):
-        _default_plugins_dir = os.path.join(BASE_DIR, "plugins")
+    # Support both internal and root-level plugins
+    PLUGINS_DIRS = [
+        os.path.join(BASE_DIR, "plugins"),
+        os.path.join(PROJECT_ROOT, "plugins")
+    ]
+    
+    # Allow overriding via environment variable (comma-separated list)
+    _env_dirs = os.getenv("PLUGINS_DIRS")
+    if _env_dirs:
+        PLUGINS_DIRS = _env_dirs.split(',')
         
-    PLUGINS_DIR = os.getenv("PLUGINS_DIR", _default_plugins_dir)
     ENABLED_PLUGINS = os.getenv("ENABLED_PLUGINS", None) # Comma-separated list of plugin folder names
