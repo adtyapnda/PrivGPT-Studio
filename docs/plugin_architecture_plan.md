@@ -22,7 +22,8 @@ Defined the following lifecycle hooks:
 - Supports enabling/disabling plugins via the `ENABLED_PLUGINS` environment variable (comma-separated list of folder names).
 - Implements safe execution with error isolation; an error in one plugin will not crash the application or affect other plugins.
 - Adds the `server` directory to `sys.path` to allow plugins to import from the `api` package.
-- **Deployment Safety**: Added a fallback path check to `api/config.py`. It now looks for plugins in the repo root first, and then falls back to `server/plugins/`. This ensures compatibility with monorepo deployment strategies (like Vercel) where only the `server/` directory might be bundled.
+- **Deployment Safety**: Updated `api/config.py` to support multiple plugin directories. It now scans both `server/plugins/` (for bundled plugins) and the project root `/plugins/` (for local development).
+- **Env Var pluarality**: Changed `PLUGINS_DIR` to `PLUGINS_DIRS` (comma-separated list) to allow for multiple search paths.
 
 ## 4. Integration Points
 Modified `server/api/routes/chat_routes.py` to call plugin hooks at the appropriate lifecycle stages:
