@@ -1329,6 +1329,7 @@ export default function ChatPage() {
       let latencyValue = "0";
 
       if (reader) {
+        let stopReading = false;
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
@@ -1407,6 +1408,7 @@ export default function ChatPage() {
                     );
 
                     latencyValue = data.latency?.toString() || "0";
+                    stopReading = true;
                     break;
 
                   case "error":
@@ -1424,6 +1426,7 @@ export default function ChatPage() {
                           : msg,
                       ),
                     );
+                    stopReading = true;
                     break;
                 }
               } catch (e) {
@@ -1432,6 +1435,7 @@ export default function ChatPage() {
               }
             }
           }
+          if (stopReading) break;
         }
       }
 
